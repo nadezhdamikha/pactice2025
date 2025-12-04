@@ -1,8 +1,26 @@
-import { Link } from 'react-router-dom';
-import logoImage from '../assets/image/logo.png';
 import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import logoImage from '../assets/image/logo.png';
 
 function Header() {
+  const navigate = useNavigate();
+  
+  // Функция для обработки поиска
+  const handleSearch = () => {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput && searchInput.value.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchInput.value.trim())}`);
+    }
+  };
+
+  // Обработчик нажатия Enter в поле поиска
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-light sticky-top">
       <div className="container">
@@ -34,10 +52,13 @@ function Header() {
           </ul>
 
           <div className="d-flex align-items-center">
+            {/* Кнопки авторизации - показываются, когда пользователь не вошел */}
             <div id="auth-buttons" style={{ display: "flex" }}>
-              <button className="btn btn-outline-primary me-2">Войти</button>
-              <button className="btn btn-primary">Регистрация</button>
+              <Link className="btn btn-outline-primary me-2" to="/login">Войти</Link>
+              <Link className="btn btn-primary" to="/register">Регистрация</Link>
             </div>
+            
+            {/* Меню пользователя - показывается, когда пользователь вошел */}
             <div id="user-menu" className="dropdown" style={{ display: "none" }}>
               <button
                 className="btn btn-outline-primary dropdown-toggle"
@@ -50,14 +71,23 @@ function Header() {
                 <span id="user-name">Пользователь</span>
               </button>
               <ul className="dropdown-menu" aria-labelledby="userDropdown">
-                <li><Link className="dropdown-item" to="/profile">Личный кабинет</Link></li>
+                <li>
+                  <Link className="dropdown-item" to="/profile">Личный кабинет</Link>
+                </li>
                 <li><hr className="dropdown-divider" /></li>
-                <li><button className="dropdown-item">Выйти</button></li>
+                <li>
+                  <button className="dropdown-item" onClick={() => {
+                    // Здесь будет логика выхода
+                    console.log('Выход из системы');
+                  }}>
+                    Выйти
+                  </button>
+                </li>
               </ul>
             </div>
           </div>
 
-          <form className="d-flex ms-2">
+          <form className="d-flex ms-2" onSubmit={(e) => e.preventDefault()}>
             <input
               className="form-control me-2"
               type="search"
@@ -65,8 +95,15 @@ function Header() {
               placeholder="Поиск"
               aria-label="Search"
               id="search-input"
+              onKeyPress={handleKeyPress}
             />
-            <button className="btn btn-primary" type="button">Поиск</button>
+            <button 
+              className="btn btn-primary" 
+              type="button"
+              onClick={handleSearch}
+            >
+              Поиск
+            </button>
             <datalist id="pets">{/* Динамически */}</datalist>
           </form>
         </div>

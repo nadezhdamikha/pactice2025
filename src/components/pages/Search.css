@@ -1,0 +1,180 @@
+/* components/pages/Search.css */
+.search-page {
+    min-height: 70vh;
+  }
+  
+  .search-page .section-title {
+    position: relative;
+    margin-bottom: 2rem;
+    padding-bottom: 0.8rem;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 2rem;
+    color: #333;
+  }
+  
+  .search-page .section-title:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 4px;
+    background: linear-gradient(to right, #0d6efd, #6f42c1);
+    border-radius: 2px;
+  }
+  
+  .search-page .card.shadow {
+    border-radius: 15px;
+    border: none;
+    overflow: hidden;
+  }
+  
+  .search-page .pet-card {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    height: 100%;
+  }
+  
+  .search-page .pet-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+  }
+  
+  .search-page .pet-card .card-img-top {
+    height: 220px;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+  }
+  
+  .search-page .pet-card:hover .card-img-top {
+    transform: scale(1.05);
+  }
+  
+  .search-page .pet-feature {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .search-page .pet-feature i {
+    width: 25px;
+    color: #0d6efd;
+    font-size: 1rem;
+    margin-top: 2px;
+  }
+  
+  .search-page .pet-feature span {
+    flex: 1;
+    color: #555;
+  }
+  
+  .search-page .pet-feature strong {
+    color: #333;
+    font-weight: 600;
+    margin-right: 5px;
+  }
+  
+  .search-page .chip-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    border-radius: 20px;
+    background: rgba(13, 110, 253, 0.95) !important;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  .search-page .fade-in {
+    animation: fadeIn 0.6s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from { 
+      opacity: 0; 
+      transform: translateY(20px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+  
+  .search-page .slide-in {
+    animation: slideIn 0.5s ease-out;
+  }
+  
+  @keyframes slideIn {
+    from { 
+      transform: translateY(30px); 
+      opacity: 0; 
+    }
+    to { 
+      transform: translateY(0); 
+      opacity: 1; 
+    }
+  }
+  
+  .search-page .btn-animate {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    padding: 10px;
+    font-weight: 500;
+  }
+  
+  .search-page .btn-animate:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(13, 110, 253, 0.2);
+  }
+  
+  .search-page .pagination .page-item.active .page-link {
+    background: linear-gradient(135deg, #0d6efd 0%, #6f42c1 100%);
+    border-color: #0d6efd;
+    color: white;
+  }
+  
+  .search-page .pagination .page-link {
+    color: #0d6efd;
+    border: 1px solid #dee2e6;
+    margin: 0 3px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+  }
+  
+  .search-page .pagination .page-link:hover {
+    background-color: #f8f9fa;
+    color: #6f42c1;
+  }
+  
+  .search-page .form-control:focus,
+  .search-page .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+  
+  .search-results {
+    min-height: 300px;
+  }
+  
+  /* Адаптивность */
+  @media (max-width: 768px) {
+    .search-page .section-title {
+      font-size: 1.6rem;
+    }
+    
+    .search-page .pet-card {
+      margin-bottom: 20px;
+    }
+    
+    .search-page .pet-feature {
+      font-size: 0.85rem;
+    }
+  }
