@@ -1,34 +1,20 @@
+// src/components/Header.jsx
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import logoImage from '../assets/image/logo.png';
+import QuickSearch from './QuickSearch';
 
 function Header() {
-  const navigate = useNavigate();
-  
-  // Функция для обработки поиска
-  const handleSearch = () => {
-    const searchInput = document.getElementById('search-input');
-    if (searchInput && searchInput.value.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchInput.value.trim())}`);
-    }
-  };
-
-  // Обработчик нажатия Enter в поле поиска
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSearch();
-    }
-  };
-
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-light sticky-top">
       <div className="container">
+        {/* Логотип и бренд */}
         <Link className="navbar-brand d-flex align-items-center" to="/">
           <img src={logoImage} className="me-2" alt="GET PET BACK логотип" width="30" height="30" />
           <span className="fw-bold">GET PET BACK</span>
         </Link>
 
+        {/* Кнопка для мобильного меню */}
         <button
           className="navbar-toggler"
           type="button"
@@ -41,7 +27,9 @@ function Header() {
           <span className="navbar-toggler-icon" />
         </button>
 
+        {/* Основное меню */}
         <div className="collapse navbar-collapse" id="navbarNav">
+          {/* Навигационные ссылки */}
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
               <Link className="nav-link" to="/search">Поиск животных</Link>
@@ -51,14 +39,15 @@ function Header() {
             </li>
           </ul>
 
-          <div className="d-flex align-items-center">
-            {/* Кнопки авторизации - показываются, когда пользователь не вошел */}
+          {/* Блок авторизации/пользователя */}
+          <div className="d-flex align-items-center me-3">
+            {/* Кнопки авторизации (показываются когда пользователь не вошел) */}
             <div id="auth-buttons" style={{ display: "flex" }}>
               <Link className="btn btn-outline-primary me-2" to="/login">Войти</Link>
               <Link className="btn btn-primary" to="/register">Регистрация</Link>
             </div>
             
-            {/* Меню пользователя - показывается, когда пользователь вошел */}
+            {/* Меню пользователя (показывается когда пользователь вошел) */}
             <div id="user-menu" className="dropdown" style={{ display: "none" }}>
               <button
                 className="btn btn-outline-primary dropdown-toggle"
@@ -76,10 +65,7 @@ function Header() {
                 </li>
                 <li><hr className="dropdown-divider" /></li>
                 <li>
-                  <button className="dropdown-item" onClick={() => {
-                    // Здесь будет логика выхода
-                    console.log('Выход из системы');
-                  }}>
+                  <button className="dropdown-item" onClick={() => console.log('Выход из системы')}>
                     Выйти
                   </button>
                 </li>
@@ -87,25 +73,10 @@ function Header() {
             </div>
           </div>
 
-          <form className="d-flex ms-2" onSubmit={(e) => e.preventDefault()}>
-            <input
-              className="form-control me-2"
-              type="search"
-              list="pets"
-              placeholder="Поиск"
-              aria-label="Search"
-              id="search-input"
-              onKeyPress={handleKeyPress}
-            />
-            <button 
-              className="btn btn-primary" 
-              type="button"
-              onClick={handleSearch}
-            >
-              Поиск
-            </button>
-            <datalist id="pets">{/* Динамически */}</datalist>
-          </form>
+          {/* Компонент быстрого поиска */}
+          <div className="flex-grow-1" style={{ maxWidth: '500px' }}>
+            <QuickSearch />
+          </div>
         </div>
       </div>
     </nav>

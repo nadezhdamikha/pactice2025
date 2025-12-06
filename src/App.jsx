@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Route, Routes } from "react-router-dom";
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -14,12 +14,40 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './styles/App.css'
 
 function App() {
+  const [notification, setNotification] = useState(null);
+
+  // Функция для показа уведомлений
+  const showNotification = (message, type = 'info') => {
+    setNotification({ message, type });
+    
+    // Автоматическое скрытие через 5 секунд
+    setTimeout(() => {
+      setNotification(null);
+    }, 5000);
+  };
+
+  // Функция для скрытия уведомления
+  const hideNotification = () => {
+    setNotification(null);
+  };
+
   return (
     <div>
       <Header />
+      
+      {/* Компонент уведомлений */}
+      {notification && (
+        <div className={`alert alert-${notification.type} alert-dismissible fade show m-3 position-fixed top-0 end-0`} 
+             style={{zIndex: 1050, maxWidth: '400px'}} 
+             role="alert">
+          {notification.message}
+          <button type="button" className="btn-close" onClick={hideNotification}></button>
+        </div>
+      )}
+      
       <main className="container py-4">
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Home showNotification={showNotification} />} />
           <Route path="/search" element={<Search />} />
           <Route path="/add-pet" element={<AddPet />} />
           <Route path="/login" element={<Login />} />
