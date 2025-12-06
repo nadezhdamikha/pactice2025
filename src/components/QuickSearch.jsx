@@ -49,19 +49,19 @@ const QuickSearch = () => {
   const fetchSuggestions = async (query) => {
     try {
       setIsLoading(true);
+      setShowSuggestions(true); // Показываем контейнер для подсказок
+      
       const response = await fetch(`https://pets.сделай.site/api/search?query=${encodeURIComponent(query)}`);
       
       if (response.ok) {
-        if (response.status === 204) {
-          // Нет результатов (статус 204)
-          setSuggestions([]);
+        const data = await response.json();
+        
+        // Проверяем, есть ли результаты
+        if (data.data && Array.isArray(data.data.orders) && data.data.orders.length > 0) {
+          setSuggestions(data.data.orders);
         } else {
-          const data = await response.json();
-          if (data.data && Array.isArray(data.data.orders)) {
-            setSuggestions(data.data.orders);
-          } else {
-            setSuggestions([]);
-          }
+          // Пустой массив или отсутствие orders
+          setSuggestions([]);
         }
       } else {
         setSuggestions([]);
@@ -71,7 +71,6 @@ const QuickSearch = () => {
       setSuggestions([]);
     } finally {
       setIsLoading(false);
-      setShowSuggestions(true);
     }
   };
 
@@ -80,17 +79,19 @@ const QuickSearch = () => {
     const query = e.target.value;
     setSearchQuery(query);
     
-    // Если запрос меньше 4 символов, сразу скрываем подсказки
+    // Сбрасываем подсказки если меньше 4 символов
     if (query.length < 4) {
       setSuggestions([]);
       setShowSuggestions(false);
     }
   };
 
-  // Функция для обработки поиска (переход на страницу поиска)
+  // Функция для обработки поиска (переход на страницу поиска с ПАРАМЕТРАМИ)
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      // Передаем запрос как параметр "kind" для поиска по описанию
+      // на странице /search
+      navigate(`/search?kind=${encodeURIComponent(searchQuery.trim())}`);
       setShowSuggestions(false);
       setSearchQuery('');
     }
@@ -112,6 +113,16 @@ const QuickSearch = () => {
     setShowSuggestions(false);
   };
 
+  // Функция для перехода к полному поиску с найденными параметрами
+  const handleShowAllResults = () => {
+    if (searchQuery.trim()) {
+      // Передаем запрос как параметр "kind" для поиска по описанию
+      navigate(`/search?kind=${encodeURIComponent(searchQuery.trim())}`);
+      setShowSuggestions(false);
+      setSearchQuery('');
+    }
+  };
+
   // Закрытие подсказок при клике вне компонента
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -127,32 +138,58 @@ const QuickSearch = () => {
     };
   }, []);
 
-  // Функция для получения короткого описания
-  const getShortDescription = (description) => {
-    if (!description) return 'Нет описания';
-    if (description.length > 60) {
-      return description.substring(0, 60) + '...';
-    }
-    return description;
-  };
-
-  // Функция для выделения совпадающего текста (с экранированием специальных символов)
+  // Функция для выделения совпадающего текста
   const highlightMatch = (text, query) => {
-    if (!text || !query) return text;
+    if (!text || !query) return text || '';
     
     // Экранируем специальные символы в запросе для RegExp
     const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`(${escapedQuery})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
+    return (text || '').replace(regex, '<mark>$1</mark>');
+  };
+
+  // Функция для отображения подсказки
+  const renderSuggestion = (suggestion) => {
+    // Показываем только тип животного и описание
+    return (
+      <div
+        key={suggestion.id}
+        className="p-2 border-bottom hover-bg-light cursor-pointer"
+        onClick={() => handleSuggestionClick(suggestion)}
+        style={{ cursor: 'pointer' }}
+        onMouseEnter={(e) => e.currentTarget.classList.add('bg-light')}
+        onMouseLeave={(e) => e.currentTarget.classList.remove('bg-light')}
+      >
+        <div className="d-flex flex-column">
+          {/* Тип животного */}
+          {suggestion.kind && (
+            <div className="fw-bold text-primary mb-1">
+              <span dangerouslySetInnerHTML={{ 
+                __html: highlightMatch(suggestion.kind, searchQuery) 
+              }} />
+            </div>
+          )}
+          
+          {/* Описание животного */}
+          {suggestion.description && (
+            <div className="text-muted small">
+              <span dangerouslySetInnerHTML={{ 
+                __html: highlightMatch(suggestion.description, searchQuery) 
+              }} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
     <div className="position-relative">
       <form className="d-flex" onSubmit={(e) => e.preventDefault()}>
-        <div className="position-relative">
+        <div className="position-relative flex-grow-1">
           <input
             ref={searchInputRef}
-            className="form-control me-2"
+            className="form-control"
             type="search"
             placeholder="Поиск по описанию..."
             aria-label="Search"
@@ -160,11 +197,20 @@ const QuickSearch = () => {
             onChange={handleSearchChange}
             onKeyPress={handleKeyPress}
             onFocus={() => {
-              if (suggestions.length > 0 || searchQuery.length > 3) {
+              if (suggestions.length > 0 && searchQuery.length > 3) {
                 setShowSuggestions(true);
               }
             }}
           />
+          
+          {/* Сообщение о минимальной длине - показываем только при 1-3 символах */}
+          {searchQuery.length > 0 && searchQuery.length < 4 && !showSuggestions && (
+            <div className="position-absolute end-0 top-50 translate-middle-y me-3">
+              <small className="text-muted">Введите минимум 4 символа</small>
+            </div>
+          )}
+          
+          {/* Индикатор загрузки */}
           {isLoading && (
             <div className="position-absolute end-0 top-50 translate-middle-y me-3">
               <div className="spinner-border spinner-border-sm text-primary" role="status">
@@ -172,14 +218,10 @@ const QuickSearch = () => {
               </div>
             </div>
           )}
-          {searchQuery.length > 0 && searchQuery.length < 4 && (
-            <div className="position-absolute end-0 top-50 translate-middle-y me-3">
-              <small className="text-muted">Введите минимум 4 символа</small>
-            </div>
-          )}
         </div>
+        
         <button 
-          className="btn btn-primary" 
+          className="btn btn-primary ms-2" 
           type="button"
           onClick={handleSearch}
           disabled={!searchQuery.trim()}
@@ -188,81 +230,49 @@ const QuickSearch = () => {
         </button>
       </form>
 
-      {/* Выпадающий список с подсказками */}
-      {showSuggestions && suggestions.length > 0 && (
+      {/* Выпадающий список с подсказками - показываем только если есть запрос > 3 символов */}
+      {showSuggestions && searchQuery.length > 3 && (
         <div 
           ref={suggestionsRef}
           className="position-absolute top-100 start-0 end-0 mt-1 bg-white rounded shadow-lg border"
-          style={{ zIndex: 1050, maxHeight: '400px', overflowY: 'auto' }}
+          style={{ 
+            zIndex: 1050, 
+            maxHeight: '300px', 
+            overflowY: 'auto',
+            display: suggestions.length > 0 || isLoading ? 'block' : 'block'
+          }}
         >
-          <div className="p-2 border-bottom bg-light">
-            <small className="text-muted">
-              Найдено {suggestions.length} {suggestions.length === 1 ? 'результат' : 
-              suggestions.length > 1 && suggestions.length < 5 ? 'результата' : 'результатов'}
-            </small>
-          </div>
-          {suggestions.map((suggestion) => (
-            <div
-              key={suggestion.id}
-              className="p-3 border-bottom hover-bg-light cursor-pointer"
-              onClick={() => handleSuggestionClick(suggestion)}
-              style={{ cursor: 'pointer' }}
-              onMouseEnter={(e) => e.currentTarget.classList.add('bg-light')}
-              onMouseLeave={(e) => e.currentTarget.classList.remove('bg-light')}
-            >
-              <div className="d-flex align-items-start">
-                <div className="flex-grow-1">
-                  <div className="d-flex justify-content-between align-items-start mb-1">
-                    <strong className="text-primary">{suggestion.kind}</strong>
-                    <small className="text-muted">
-                      {suggestion.date ? new Date(suggestion.date).toLocaleDateString('ru-RU') : 'Не указана'}
-                    </small>
-                  </div>
-                  <div 
-                    className="text-muted small mb-1"
-                    dangerouslySetInnerHTML={{ 
-                      __html: highlightMatch(getShortDescription(suggestion.description), searchQuery) 
-                    }}
-                  />
-                  <div className="d-flex flex-wrap gap-2 small">
-                    {suggestion.mark && suggestion.mark.trim() && (
-                      <span className="badge bg-secondary">
-                        <i className="bi bi-tag me-1"></i> {suggestion.mark}
-                      </span>
-                    )}
-                    {suggestion.district && suggestion.district.trim() && (
-                      <span className="badge bg-info text-dark">
-                        <i className="bi bi-geo-alt me-1"></i> {suggestion.district}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
+          {isLoading ? (
+            <div className="p-3 text-center">
+              <div className="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+              <span className="text-muted">Ищем совпадения...</span>
             </div>
-          ))}
-          <div className="p-2 border-top text-center">
-            <button 
-              className="btn btn-sm btn-outline-primary"
-              onClick={handleSearch}
-            >
-              <i className="bi bi-search me-1"></i>
-              Показать все результаты
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showSuggestions && searchQuery.length > 3 && suggestions.length === 0 && !isLoading && (
-        <div 
-          ref={suggestionsRef}
-          className="position-absolute top-100 start-0 end-0 mt-1 bg-white rounded shadow-lg border p-3"
-          style={{ zIndex: 1050 }}
-        >
-          <div className="text-center text-muted">
-            <i className="bi bi-search display-6 mb-2"></i>
-            <p className="mb-0">Ничего не найдено по запросу "{searchQuery}"</p>
-            <small>Попробуйте изменить запрос</small>
-          </div>
+          ) : suggestions.length > 0 ? (
+            <>
+              <div className="p-2 border-bottom bg-light">
+                <small className="text-muted">
+                  Найдено {suggestions.length} {suggestions.length === 1 ? 'результат' : 
+                  suggestions.length > 1 && suggestions.length < 5 ? 'результата' : 'результатов'}
+                </small>
+              </div>
+              {suggestions.map(renderSuggestion)}
+              <div className="p-2 border-top text-center">
+                <button 
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={handleShowAllResults}
+                >
+                  <i className="bi bi-search me-1"></i>
+                  Показать все результаты
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="p-3 text-center text-muted">
+              <i className="bi bi-search mb-2"></i>
+              <p className="mb-0">Ничего не найдено по запросу "{searchQuery}"</p>
+              <small>Попробуйте изменить запрос</small>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -204,22 +204,7 @@ const NewsletterSection = ({ showNotification }) => {
                       )}
                     </button>
                   </div>
-                  
-                  <div className="mt-4">
-                    <div className="form-check">
-                      <input 
-                        className="form-check-input" 
-                        type="checkbox" 
-                        id="privacy-policy" 
-                        defaultChecked
-                        disabled={isLoading}
-                      />
-                      <label className="form-check-label small" htmlFor="privacy-policy">
-                        Нажимая кнопку "Подписаться", я соглашаюсь с обработкой персональных данных и 
-                        принимаю <a href="/privacy" className="text-decoration-none">Политику конфиденциальности</a>
-                      </label>
-                    </div>
-                  </div>
+
                 </form>
                 
 
