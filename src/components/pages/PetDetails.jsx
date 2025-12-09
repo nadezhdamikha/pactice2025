@@ -1,47 +1,61 @@
-import React, { useState, useEffect } from 'react';
+// src/components/pages/PetDetails.jsx
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
-const PetDetailsPage = () => {
+const PetDetailsPage = ({ showNotification }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [pet, setPet] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hasShownNotification, setHasShownNotification] = useState(false); // Флаг для уведомления
+
+  const fetchPetDetails = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await fetch(`https://pets.сделай.site/api/pets/${id}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Животное не найдено');
+        }
+        throw new Error(`Ошибка загрузки: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.data && data.data.pet) {
+        setPet(data.data.pet);
+      } else if (data) {
+        setPet(data);
+      } else {
+        setPet(null);
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке деталей животного:', error);
+      setError(error.message || 'Не удалось загрузить информацию о животном');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    const fetchPetDetails = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const response = await fetch(`https://pets.сделай.site/api/pets/${id}`);
-        
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Животное не найдено');
-          }
-          throw new Error(`Ошибка загрузки: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.data && data.data.pet) {
-          setPet(data.data.pet);
-        } else {
-          setPet(null);
-        }
-      } catch (error) {
-        console.error('Ошибка при загрузке деталей животного:', error);
-        setError(error.message || 'Не удалось загрузить информацию о животном');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (id) {
       fetchPetDetails();
     }
-  }, [id]);
+  }, [id, fetchPetDetails]);
+
+  // Показываем уведомление только один раз после успешной загрузки
+  useEffect(() => {
+    if (pet && !isLoading && !error && !hasShownNotification) {
+      
+      setHasShownNotification(true);
+    }
+  }, [pet, isLoading, error, hasShownNotification, showNotification]);
 
   // Функция для получения полного URL изображения
   const getImageUrl = (imagePath) => {
@@ -66,9 +80,7 @@ const PetDetailsPage = () => {
       return date.toLocaleDateString('ru-RU', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        year: 'numeric'
       });
     } catch (error) {
       console.error('Ошибка форматирования даты:', dateString, error);
@@ -76,11 +88,28 @@ const PetDetailsPage = () => {
     }
   };
 
-  // Маскирование телефона
-  const maskPhone = (phone) => {
+  // Маскирование телефона (для неавторизованных пользователей)
+  const maskPhone = (phone, isAuthenticated) => {
     if (!phone) return 'Не указан';
-    // Оставляем последние 4 цифры
-    return phone.replace(/(\d{4})$/, '****$1');
+    
+    if (isAuthenticated) {
+      // Показываем полный телефон авторизованному пользователю
+      return phone;
+    } else {
+      // Маскируем для неавторизованных
+      // Оставляем последние 4 цифры
+      const visibleDigits = 4;
+      const phoneLength = phone.length;
+      if (phoneLength <= visibleDigits) return phone;
+      
+      const maskedPart = '*'.repeat(phoneLength - visibleDigits);
+      const visiblePart = phone.slice(-visibleDigits);
+      return `${maskedPart}${visiblePart}`;
+    }
+  };
+
+  const handleGoBack = () => {
+    navigate(-1);
   };
 
   if (isLoading) {
@@ -105,7 +134,7 @@ const PetDetailsPage = () => {
         </div>
         <button 
           className="btn btn-primary mt-3"
-          onClick={() => navigate(-1)}
+          onClick={handleGoBack}
         >
           <i className="bi bi-arrow-left me-2"></i>
           Вернуться назад
@@ -121,7 +150,7 @@ const PetDetailsPage = () => {
     <div className="container py-5">
       <button 
         className="btn btn-outline-secondary mb-4"
-        onClick={() => navigate(-1)}
+        onClick={handleGoBack}
       >
         <i className="bi bi-arrow-left me-2"></i>
         Назад к списку
@@ -193,7 +222,7 @@ const PetDetailsPage = () => {
             ) : (
               <img 
                 src="https://placebear.com/g/800/500" 
-                className="img-fluid rounded-start"
+                className="img-fluid rounded-start w-100"
                 alt={pet.kind}
                 style={{ height: '500px', objectFit: 'cover' }}
               />
@@ -203,78 +232,73 @@ const PetDetailsPage = () => {
           {/* Правая часть - информация */}
           <div className="col-md-6">
             <div className="card-body h-100 d-flex flex-column">
-              <h1 className="card-title">{pet.kind}</h1>
+              <h3 className="card-title">{pet.kind}</h3>
               
-              <div className="mb-4">
+              <div className="mb-3">
                 <h5>Описание:</h5>
                 <p className="card-text">{pet.description || 'Описание отсутствует'}</p>
               </div>
               
-              <div className="mt-auto">
-                <div className="row">
-                  <div className="col-md-6">
-                    <div className="pet-feature mb-3">
-                      <i className="bi bi-upc-scan fs-5"></i>
-                      <div>
-                        <strong>Номер чипа/марки:</strong>
-                        <p className="mb-0">{pet.mark || 'Не указан'}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="pet-feature mb-3">
-                      <i className="bi bi-geo-alt fs-5"></i>
-                      <div>
-                        <strong>Район находки:</strong>
-                        <p className="mb-0">{pet.district || 'Не указан'}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="pet-feature mb-3">
-                      <i className="bi bi-calendar fs-5"></i>
-                      <div>
-                        <strong>Дата находки:</strong>
-                        <p className="mb-0">{formatDate(pet.date)}</p>
-                      </div>
+              <div className="row">
+                <div className="col-md-6">
+                  <div className="pet-feature mb-3">
+                    <i className="bi bi-upc-scan"></i>
+                    <div>
+                      <strong>Номер чипа/марки:</strong>
+                      <p className="mb-0">{pet.mark || 'Не указан'}</p>
                     </div>
                   </div>
                   
-                  <div className="col-md-6">
-                    <div className="pet-feature mb-3">
-                      <i className="bi bi-person fs-5"></i>
-                      <div>
-                        <strong>Нашедший:</strong>
-                        <p className="mb-0">{pet.name || 'Не указан'}</p>
-                      </div>
+                  <div className="pet-feature mb-3">
+                    <i className="bi bi-geo-alt"></i>
+                    <div>
+                      <strong>Район находки:</strong>
+                      <p className="mb-0">{pet.district || 'Не указан'}</p>
                     </div>
-                    
-                    <div className="pet-feature mb-3">
-                      <i className="bi bi-telephone fs-5"></i>
-                      <div>
-                        <strong>Телефон:</strong>
-                        <p className="mb-0">{maskPhone(pet.phone)}</p>
-                      </div>
+                  </div>
+                  
+                  <div className="pet-feature mb-3">
+                    <i className="bi bi-calendar"></i>
+                    <div>
+                      <strong>Дата находки:</strong>
+                      <p className="mb-0">{formatDate(pet.date)}</p>
                     </div>
-                    
-                    {pet.email && (
-                      <div className="pet-feature mb-3">
-                        <i className="bi bi-envelope fs-5"></i>
-                        <div>
-                          <strong>Email:</strong>
-                          <p className="mb-0">{pet.email}</p>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
-             
+                
+                <div className="col-md-6">
+                  <div className="pet-feature mb-3">
+                    <i className="bi bi-person"></i>
+                    <div>
+                      <strong>Нашедший:</strong>
+                      <p className="mb-0">{pet.name || 'Не указан'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="pet-feature mb-3">
+                    <i className="bi bi-telephone"></i>
+                    <div>
+                      <strong>Телефон:</strong>
+                      <p className="mb-0">{maskPhone(pet.phone, !!user)}</p>
+                    </div>
+                  </div>
+                  
+                  {pet.email && (
+                    <div className="pet-feature mb-3">
+                      <i className="bi bi-envelope"></i>
+                      <div>
+                        <strong>Email:</strong>
+                        <p className="mb-0">{pet.email}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-   
-      </div>
-
+    </div>
   );
 };
 

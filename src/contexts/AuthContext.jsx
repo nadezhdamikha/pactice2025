@@ -1,58 +1,92 @@
 // src/contexts/AuthContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
-const AuthContext = createContext();
+const AuthContext = createContext({});
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [authToken, setAuthToken] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Проверка авторизации при загрузке
   useEffect(() => {
+    // Проверяем сохраненную аутентификацию при загрузке
     const token = localStorage.getItem('authToken');
-    const user = localStorage.getItem('userData');
+    const email = localStorage.getItem('userEmail');
+    const name = localStorage.getItem('userName');
+    const phone = localStorage.getItem('userPhone');
     
-    if (token && user) {
-      setAuthToken(token);
-      setCurrentUser(JSON.parse(user));
+    if (token && email) {
+      setUser({ 
+        email, 
+        token,
+        name: name || email.split('@')[0], // Если имени нет, используем часть email
+        phone: phone || ''
+      });
     }
+    
+    setLoading(false);
   }, []);
 
-  // Вход
-  const login = (token, userData) => {
+  const login = (userData, token) => {
     localStorage.setItem('authToken', token);
-    localStorage.setItem('userData', JSON.stringify(userData));
-    setAuthToken(token);
-    setCurrentUser(userData);
+    localStorage.setItem('userEmail', userData.email);
+    // Сохраняем имя, если оно есть и содержит только кириллицу
+    if (userData.name && /^[А-Яа-яЁё\s-]+$/.test(userData.name)) {
+      localStorage.setItem('userName', userData.name);
+    } else {
+      // Иначе используем часть email как имя
+      localStorage.setItem('userName', userData.email.split('@')[0]);
+    }
+    localStorage.setItem('userPhone', userData.phone || '');
+    
+    setUser({ 
+      email: userData.email, 
+      token,
+      name: userData.name && /^[А-Яа-яЁё\s-]+$/.test(userData.name) 
+        ? userData.name 
+        : userData.email.split('@')[0],
+      phone: userData.phone || ''
+    });
   };
 
-  // Выход
   const logout = () => {
     localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    setAuthToken(null);
-    setCurrentUser(null);
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userPhone');
+    setUser(null);
   };
 
-  // Обновление профиля
-  const updateProfile = (updatedUserData) => {
-    const newUserData = { ...currentUser, ...updatedUserData };
-    localStorage.setItem('userData', JSON.stringify(newUserData));
-    setCurrentUser(newUserData);
+  const updateUser = (userData) => {
+    if (userData.name && /^[А-Яа-яЁё\s-]+$/.test(userData.name)) {
+      localStorage.setItem('userName', userData.name);
+    }
+    if (userData.phone) {
+      localStorage.setItem('userPhone', userData.phone);
+    }
+    if (userData.email) {
+      localStorage.setItem('userEmail', userData.email);
+    }
+    
+    setUser(prev => ({
+      ...prev,
+      ...userData
+    }));
+  };
+
+  const value = {
+    user,
+    login,
+    logout,
+    updateUser,
+    isAuthenticated: !!user,
+    loading
   };
 
   return (
-    <AuthContext.Provider value={{
-      currentUser,
-      authToken,
-      login,
-      logout,
-      updateProfile,
-      isAuthenticated: !!authToken
-    }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

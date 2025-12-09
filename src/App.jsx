@@ -1,5 +1,6 @@
+// src/App.jsx
 import React, { useState } from 'react';
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './components/pages/Home';
@@ -11,7 +12,50 @@ import Profile from './components/pages/Profile';
 import PetDetails from './components/pages/PetDetails';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-import './styles/App.css'
+import './styles/App.css';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+
+// Компонент для защиты маршрутов
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="container py-5 text-center">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Загрузка...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+// Компонент для защиты маршрутов, доступных только для неавторизованных
+const GuestRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="container py-5 text-center">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Загрузка...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/profile" replace />;
+  }
+
+  return children;
+};
 
 function App() {
   const [notification, setNotification] = useState(null);
@@ -19,7 +63,7 @@ function App() {
   // Функция для показа уведомлений
   const showNotification = (message, type = 'info') => {
     setNotification({ message, type });
-    
+
     // Автоматическое скрытие через 5 секунд
     setTimeout(() => {
       setNotification(null);
@@ -32,32 +76,57 @@ function App() {
   };
 
   return (
-    <div>
-      <Header />
-      
-      {/* Компонент уведомлений */}
-      {notification && (
-        <div className={`alert alert-${notification.type} alert-dismissible fade show m-3 position-fixed top-0 end-0`} 
-             style={{zIndex: 1050, maxWidth: '400px'}} 
-             role="alert">
-          {notification.message}
-          <button type="button" className="btn-close" onClick={hideNotification}></button>
-        </div>
-      )}
-      
-      <main className="container py-4">
-        <Routes>
-          <Route path="/" element={<Home showNotification={showNotification} />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/add-pet" element={<AddPet />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/pet/:id" element={<PetDetails />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+    <AuthProvider>
+      <div>
+        <Header />
+        
+        {/* Компонент уведомлений */}
+        {notification && (
+          <div className={`alert alert-${notification.type} alert-dismissible fade show m-3 position-fixed top-0 end-0`}
+               style={{zIndex: 1050, maxWidth: '400px'}}
+               role="alert">
+            {notification.message}
+            <button type="button" className="btn-close" onClick={hideNotification}></button>
+          </div>
+        )}
+        
+        <main className="container py-4">
+          <Routes>
+            <Route path="/" element={<Home showNotification={showNotification} />} />
+            <Route path="/search" element={<Search showNotification={showNotification} />} />
+            
+            {/* Защищенные маршруты - только для авторизованных */}
+            <Route path="/add-pet" element={
+              <ProtectedRoute>
+                <AddPet showNotification={showNotification} />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile showNotification={showNotification} />
+              </ProtectedRoute>
+            } />
+            
+            {/* Маршруты только для гостей */}
+            <Route path="/login" element={
+              <GuestRoute>
+                <Login showNotification={showNotification} />
+              </GuestRoute>
+            } />
+            
+            <Route path="/register" element={
+              <GuestRoute>
+                <Register showNotification={showNotification} />
+              </GuestRoute>
+            } />
+            
+            <Route path="/pet/:id" element={<PetDetails showNotification={showNotification} />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </AuthProvider>
   );
 }
 

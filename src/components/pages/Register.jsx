@@ -1,10 +1,12 @@
 // src/components/pages/Register.jsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
-const Register = () => {
+const Register = ({ showNotification }) => {
   const navigate = useNavigate();
-  
+  const { login } = useAuth();
+
   // Состояния формы
   const [formData, setFormData] = useState({
     name: '',
@@ -14,17 +16,13 @@ const Register = () => {
     password_confirmation: '',
     confirm: 0
   });
-  
+
   // Состояния для UI
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  
-  // Состояния для видимости паролей
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Валидация имени (кириллица, пробел, дефис)
   const validateName = (name) => {
     if (!name.trim()) {
@@ -39,7 +37,7 @@ const Register = () => {
     }
     return '';
   };
-  
+
   // Валидация телефона (только цифры и +)
   const validatePhone = (phone) => {
     if (!phone.trim()) {
@@ -57,7 +55,7 @@ const Register = () => {
     }
     return '';
   };
-  
+
   // Валидация email
   const validateEmail = (email) => {
     if (!email.trim()) {
@@ -69,7 +67,7 @@ const Register = () => {
     }
     return '';
   };
-  
+
   // Валидация пароля
   const validatePassword = (password) => {
     if (!password) {
@@ -89,7 +87,7 @@ const Register = () => {
     }
     return '';
   };
-  
+
   // Валидация подтверждения пароля
   const validatePasswordConfirmation = (password, confirmation) => {
     if (!confirmation) {
@@ -100,7 +98,7 @@ const Register = () => {
     }
     return '';
   };
-  
+
   // Общая валидация формы
   const validateForm = () => {
     const newErrors = {};
@@ -119,7 +117,7 @@ const Register = () => {
     if (passwordError) newErrors.password = passwordError;
     
     const confirmationError = validatePasswordConfirmation(
-      formData.password, 
+      formData.password,
       formData.password_confirmation
     );
     if (confirmationError) newErrors.password_confirmation = confirmationError;
@@ -132,7 +130,7 @@ const Register = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   // Обработчик изменения полей формы
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -149,20 +147,14 @@ const Register = () => {
         [name]: ''
       }));
     }
-    
-    // Очищаем серверную ошибку при любом изменении
-    if (serverError) {
-      setServerError('');
-    }
   };
-  
+
   // Обработчик отправки формы
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Очищаем предыдущие сообщения
-    setServerError('');
-    setSuccessMessage('');
+    setErrors({});
     
     // Валидация формы на клиенте
     if (!validateForm()) {
@@ -191,8 +183,6 @@ const Register = () => {
         confirm: formData.confirm
       };
       
-      console.log('Отправка данных:', dataToSend);
-      
       const response = await fetch('https://pets.сделай.site/api/register', {
         method: 'POST',
         headers: {
@@ -201,19 +191,40 @@ const Register = () => {
         body: JSON.stringify(dataToSend),
       });
       
-      console.log('Ответ сервера:', response.status);
-      
-      if (response.status === 204) {
-        // Успешная регистрация
-        setSuccessMessage('Регистрация прошла успешно! Вы будете перенаправлены на страницу входа.');
+      if (response.ok) {
+        // Успешная регистрация - теперь логинимся автоматически
+        showNotification('Регистрация прошла успешно! Выполняется вход...', 'success');
         
-        // Сохраняем данные пользователя (опционально)
-        localStorage.setItem('userEmail', formData.email);
+        // Пробуем войти с теми же данными
+        const loginResponse = await fetch('https://pets.сделай.site/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email.trim(),
+            password: formData.password
+          }),
+        });
         
-        // Перенаправляем на страницу входа через 3 секунды
-        setTimeout(() => {
+        if (loginResponse.ok) {
+          const loginData = await loginResponse.json();
+          
+          // Вызываем функцию логина из контекста
+          login({
+            email: formData.email.trim(),
+            name: formData.name.trim(),
+            phone: formData.phone.trim()
+          }, loginData.token || loginData.data?.token);
+          
+          showNotification('Вход выполнен успешно!', 'success');
+          // Перенаправляем в личный кабинет
+          navigate('/profile');
+        } else {
+          // Если не удалось войти автоматически
+          showNotification('Регистрация прошла успешно! Пожалуйста, войдите в систему', 'success');
           navigate('/login');
-        }, 3000);
+        }
         
       } else if (response.status === 422) {
         // Ошибки валидации от сервера
@@ -232,23 +243,30 @@ const Register = () => {
           // Показываем первую ошибку
           const firstError = Object.values(serverErrors)[0];
           if (firstError) {
-            setServerError(firstError);
+            showNotification(firstError, 'danger');
           }
         } else {
-          setServerError('Ошибка валидации данных');
+          showNotification('Ошибка валидации данных', 'danger');
         }
       } else {
         // Другие ошибки сервера
-        setServerError(`Ошибка сервера: ${response.status}. Попробуйте позже.`);
+        const errorText = await response.text();
+        try {
+          const errorData = JSON.parse(errorText);
+          const errorMsg = errorData.message || errorData.error || `Ошибка сервера: ${response.status}`;
+          showNotification(errorMsg, 'danger');
+        } catch {
+          showNotification(`Ошибка сервера: ${response.status}`, 'danger');
+        }
       }
     } catch (error) {
       console.error('Ошибка при регистрации:', error);
-      setServerError('Ошибка сети. Проверьте соединение с интернетом.');
+      showNotification('Ошибка сети. Проверьте соединение с интернетом.', 'danger');
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   // Обработчик для отображения примера заполнения
   const handleFillExample = () => {
     setFormData({
@@ -262,10 +280,8 @@ const Register = () => {
     
     // Очищаем ошибки
     setErrors({});
-    setServerError('');
-    setSuccessMessage('');
   };
-  
+
   // Проверка силы пароля
   const getPasswordStrength = (password) => {
     if (!password) return { text: '', class: '' };
@@ -286,9 +302,9 @@ const Register = () => {
     
     return strength[score] || strength[0];
   };
-  
+
   const passwordStrength = getPasswordStrength(formData.password);
-  
+
   return (
     <div className="register-page">
       <div className="container py-5">
@@ -297,22 +313,6 @@ const Register = () => {
             <div className="card shadow">
               <div className="card-body p-4">
                 <h2 className="text-center mb-4">Регистрация</h2>
-                
-                {/* Сообщение об успехе */}
-                {successMessage && (
-                  <div className="alert alert-success">
-                    <i className="bi bi-check-circle me-2"></i>
-                    {successMessage}
-                  </div>
-                )}
-                
-                {/* Общая ошибка сервера */}
-                {serverError && !successMessage && (
-                  <div className="alert alert-danger">
-                    <i className="bi bi-exclamation-triangle me-2"></i>
-                    {serverError}
-                  </div>
-                )}
                 
                 <form onSubmit={handleSubmit} noValidate>
                   {/* Имя */}
@@ -432,9 +432,9 @@ const Register = () => {
                           </small>
                         </div>
                         <div className="progress mt-1" style={{height: '5px'}}>
-                          <div 
+                          <div
                             className={`progress-bar ${passwordStrength.class}`}
-                            style={{width: `${(passwordStrength.text === 'Надежный' ? 100 : 
+                            style={{width: `${(passwordStrength.text === 'Надежный' ? 100 :
                                       passwordStrength.text === 'Хороший' ? 75 :
                                       passwordStrength.text === 'Средний' ? 50 :
                                       passwordStrength.text === 'Слабый' ? 25 : 0)}%`}}
@@ -518,8 +518,8 @@ const Register = () => {
                   
                   {/* Кнопки */}
                   <div className="d-grid gap-2">
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       className="btn btn-primary btn-lg"
                       disabled={isLoading}
                     >
@@ -536,8 +536,8 @@ const Register = () => {
                       )}
                     </button>
                     
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="btn btn-outline-secondary"
                       onClick={handleFillExample}
                       disabled={isLoading}
