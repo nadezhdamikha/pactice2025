@@ -217,4 +217,4 @@ const NewsletterSection = ({ showNotification }) => {
   );
 };
 
-export default NewsletterSection;
+export default NewsletterSection; // Make the componet accessible from other modules.
