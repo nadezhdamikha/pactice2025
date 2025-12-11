@@ -67,7 +67,7 @@ function AddPet({ showNotification }) {
         phone: user.phone || '',
         email: user.email || ''
       }));
-      setRegister(false);
+      setRegister(true); // Автоматически ставим галочку регистрации для авторизованных пользователей
     }
   }, [isAuthenticated, user]);
 
@@ -193,6 +193,7 @@ function AddPet({ showNotification }) {
     submitData.append('mark', formData.mark);
     submitData.append('description', formData.description);
     submitData.append('confirm', agreement ? 1 : 0);
+    submitData.append('register', register ? 1 : 0); // Добавляем поле register
     
     // Добавляем фото если есть
     if (formData.photo1) submitData.append('photo1', formData.photo1);
@@ -264,7 +265,7 @@ function AddPet({ showNotification }) {
               name: formData.name,
               phone: formData.phone
             }, token);
-            showNotification('Регистрация и вход выполнены успешно!', 'success');
+            showNotification('Объявление привязано к вашему аккаунту!', 'success');
           }
           
           // Перенаправляем на страницу объявления
@@ -406,25 +407,47 @@ function AddPet({ showNotification }) {
                   {errors.email && <div className="invalid-feedback">{errors.email}</div>}
                 </div>
                 
-                {!isAuthenticated && (
-                  <div className="mb-3">
-                    <div className="form-check">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="register"
-                        name="register"
-                        checked={register}
-                        onChange={(e) => {
-                          setRegister(e.target.checked);
-                        }}
-                      />
-                      <label className="form-check-label" htmlFor="register">
-                        Пройти автоматическую регистрацию при добавлении объявления
-                      </label>
-                    </div>
+                <div className="mb-3">
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="register"
+                      name="register"
+                      checked={register}
+                      onChange={(e) => {
+                        setRegister(e.target.checked);
+                        // Очищаем пароли при снятии галочки
+                        if (!e.target.checked) {
+                          setPassword('');
+                          setPasswordConfirmation('');
+                          setPasswordRequirements({
+                            length: false,
+                            lowercase: false,
+                            uppercase: false,
+                            digit: false
+                          });
+                        }
+                      }}
+                      disabled={isAuthenticated} // Для авторизованных нельзя снять галочку
+                    />
+                    <label className="form-check-label" htmlFor="register">
+                      {isAuthenticated ? (
+                        <>
+                          <strong>Привязать объявление к моему аккаунту</strong>
+                          <div className="form-text text-muted">Чтобы объявление отображалось в вашем личном кабинете</div>
+                        </>
+                      ) : (
+                        "Пройти автоматическую регистрацию при добавлении объявления"
+                      )}
+                    </label>
+                    {isAuthenticated && (
+                      <div className="form-text text-warning">
+                        <i className="bi bi-exclamation-triangle"></i> Для привязки объявления к вашему аккаунту необходимо ввести пароль
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
                 
                 {register && (
                   <div className="row mb-3">
@@ -441,6 +464,8 @@ function AddPet({ showNotification }) {
                         onChange={(e) => {
                           setPassword(e.target.value);
                         }}
+                        required={register}
+                        placeholder={isAuthenticated ? "Введите пароль для привязки аккаунта" : "Введите пароль"}
                       />
                       {errors.password && <div className="invalid-feedback">{errors.password}</div>}
                       
@@ -477,6 +502,8 @@ function AddPet({ showNotification }) {
                         onChange={(e) => {
                           setPasswordConfirmation(e.target.value);
                         }}
+                        required={register}
+                        placeholder={isAuthenticated ? "Подтвердите пароль" : "Подтвердите пароль"}
                       />
                       {errors.password_confirmation && <div className="invalid-feedback">{errors.password_confirmation}</div>}
                     </div>
