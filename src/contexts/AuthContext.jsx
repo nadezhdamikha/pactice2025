@@ -1,4 +1,3 @@
-// src/contexts/AuthContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext({});
@@ -15,51 +14,77 @@ export const AuthProvider = ({ children }) => {
     const email = localStorage.getItem('userEmail');
     const name = localStorage.getItem('userName');
     const phone = localStorage.getItem('userPhone');
+    const userId = localStorage.getItem('userId');
     
+    // ВАЖНО: только если есть токен - это авторизованный пользователь
     if (token && email) {
-      setUser({ 
-        email, 
+      setUser({
+        email,
         token,
-        name: name || email.split('@')[0], // Если имени нет, используем часть email
-        phone: phone || ''
+        name: name || email.split('@')[0],
+        phone: phone || '',
+        id: userId
       });
+    } 
+    // Если есть email но НЕТ токена - удаляем эти данные, они не нужны
+    else if (email) {
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userPhone');
+      localStorage.removeItem('userId');
+      setUser(null);
     }
     
     setLoading(false);
   }, []);
 
   const login = (userData, token) => {
+    if (!token) {
+      console.error('Пустой токен при входе');
+      return;
+    }
+    
+    // Сохраняем все данные
     localStorage.setItem('authToken', token);
     localStorage.setItem('userEmail', userData.email);
-    // Сохраняем имя, если оно есть и содержит только кириллицу
-    if (userData.name && /^[А-Яа-яЁё\s-]+$/.test(userData.name)) {
+    
+    if (userData.name) {
       localStorage.setItem('userName', userData.name);
     } else {
-      // Иначе используем часть email как имя
       localStorage.setItem('userName', userData.email.split('@')[0]);
     }
-    localStorage.setItem('userPhone', userData.phone || '');
     
-    setUser({ 
-      email: userData.email, 
+    if (userData.phone) {
+      localStorage.setItem('userPhone', userData.phone);
+    }
+    
+    if (userData.id) {
+      localStorage.setItem('userId', userData.id.toString());
+    }
+    
+    setUser({
+      email: userData.email,
       token,
-      name: userData.name && /^[А-Яа-яЁё\s-]+$/.test(userData.name) 
-        ? userData.name 
-        : userData.email.split('@')[0],
-      phone: userData.phone || ''
+      name: userData.name || userData.email.split('@')[0],
+      phone: userData.phone || '',
+      id: userData.id
     });
   };
+
+  // Функция saveUserData УДАЛЕНА - теперь всегда создается аккаунт
+  // const saveUserData = (userData) => { ... } // УБРАТЬ ЭТУ ФУНКЦИЮ
 
   const logout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userName');
     localStorage.removeItem('userPhone');
+    localStorage.removeItem('userId');
     setUser(null);
   };
 
   const updateUser = (userData) => {
-    if (userData.name && /^[А-Яа-яЁё\s-]+$/.test(userData.name)) {
+    if (userData.name) {
       localStorage.setItem('userName', userData.name);
     }
     if (userData.phone) {
@@ -67,6 +92,9 @@ export const AuthProvider = ({ children }) => {
     }
     if (userData.email) {
       localStorage.setItem('userEmail', userData.email);
+    }
+    if (userData.id) {
+      localStorage.setItem('userId', userData.id.toString());
     }
     
     setUser(prev => ({
@@ -80,7 +108,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateUser,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !!user.token, // Только с токеном!
     loading
   };
 

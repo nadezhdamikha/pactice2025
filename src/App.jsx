@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState } from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
 import Header from './components/Header';
@@ -95,13 +94,10 @@ function App() {
             <Route path="/" element={<Home showNotification={showNotification} />} />
             <Route path="/search" element={<Search showNotification={showNotification} />} />
             
-            {/* Защищенные маршруты - только для авторизованных */}
-            <Route path="/add-pet" element={
-              <ProtectedRoute>
-                <AddPet showNotification={showNotification} />
-              </ProtectedRoute>
-            } />
+            {/* Маршрут /add-pet доступен всем (убрана защита) */}
+            <Route path="/add-pet" element={<AddPet showNotification={showNotification} />} />
             
+            {/* Защищенные маршруты - только для авторизованных */}
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Profile showNotification={showNotification} />

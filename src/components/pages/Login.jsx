@@ -1,11 +1,12 @@
-// src/components/pages/Login.jsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
+const API_BASE_URL = 'https://pets.сделай.site';
+
 const Login = ({ showNotification }) => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, logout } = useAuth(); // Добавляем logout для очистки
 
   const [formData, setFormData] = useState({
     email: '',
@@ -46,6 +47,41 @@ const Login = ({ showNotification }) => {
     }
   };
 
+  const fetchUserProfile = async (token) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Профиль пользователя:', data);
+        
+        // Обрабатываем разные форматы ответа
+        let userInfo;
+        if (data.id) {
+          // Формат: { id, name, email, phone, ... }
+          userInfo = data;
+        } else if (data.data?.user?.[0]) {
+          // Формат: { data: { user: [ {...} ] } }
+          userInfo = data.data.user[0];
+        } else if (data.data) {
+          // Формат: { data: { id, name, ... } }
+          userInfo = data.data;
+        }
+        
+        return userInfo;
+      }
+      return null;
+    } catch (error) {
+      console.error('Ошибка загрузки профиля:', error);
+      return null;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -56,7 +92,13 @@ const Login = ({ showNotification }) => {
     setIsLoading(true);
     
     try {
-      const response = await fetch('https://pets.сделай.site/api/login', {
+      // ВАЖНО: Если у пользователя уже есть данные без токена, очищаем их
+      if (localStorage.getItem('userEmail') && !localStorage.getItem('authToken')) {
+        logout(); // Очищаем старые данные
+      }
+      
+      // 1. Логинимся
+      const loginResponse = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,18 +109,43 @@ const Login = ({ showNotification }) => {
         }),
       });
       
-      if (response.ok) {
-        const data = await response.json();
+      if (loginResponse.ok) {
+        const loginData = await loginResponse.json();
         
-        // Получаем данные пользователя (в реальном приложении нужно сделать запрос к профилю)
-        // Пока используем email и имя если есть
-        const userData = {
-          email: formData.email,
-          name: data.name || localStorage.getItem('userName') || formData.email.split('@')[0]
-        };
+        // Проверяем, есть ли токен
+        if (!loginData.token && !loginData.data?.token) {
+          showNotification('Ошибка: токен не получен от сервера', 'danger');
+          setIsLoading(false);
+          return;
+        }
         
-        // Вызываем функцию логина из контекста
-        login(userData, data.token || 'mock-token');
+        const token = loginData.token || loginData.data?.token;
+        
+        // 2. Получаем полный профиль пользователя
+        const userProfile = await fetchUserProfile(token);
+        
+        if (!userProfile) {
+          showNotification('Не удалось загрузить профиль пользователя', 'warning');
+          // Используем данные из логина как fallback
+          const fallbackUserData = {
+            email: formData.email,
+            name: formData.email.split('@')[0],
+            phone: '',
+            id: loginData.id || loginData.data?.id || null
+          };
+          
+          login(fallbackUserData, token);
+        } else {
+          // Используем данные из профиля
+          const userData = {
+            email: userProfile.email || formData.email,
+            name: userProfile.name || formData.email.split('@')[0],
+            phone: userProfile.phone || '',
+            id: userProfile.id || loginData.id || loginData.data?.id
+          };
+          
+          login(userData, token);
+        }
         
         showNotification('Вы успешно вошли в систему!', 'success');
         
@@ -89,11 +156,14 @@ const Login = ({ showNotification }) => {
         // Перенаправляем в личный кабинет
         navigate('/profile');
         
-      } else if (response.status === 401) {
+      } else if (loginResponse.status === 401) {
         showNotification('Неверный email или пароль', 'danger');
-        setErrors({ email: 'Неверный email или пароль', password: 'Неверный email или пароль' });
-      } else if (response.status === 422) {
-        const errorData = await response.json();
+        setErrors({ 
+          email: 'Неверный email или пароль', 
+          password: 'Неверный email или пароль' 
+        });
+      } else if (loginResponse.status === 422) {
+        const errorData = await loginResponse.json();
         showNotification(errorData.message || 'Ошибка валидации', 'danger');
       } else {
         showNotification('Ошибка сервера. Попробуйте позже.', 'danger');

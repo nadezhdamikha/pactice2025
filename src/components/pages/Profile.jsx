@@ -1,7 +1,10 @@
 // src/components/pages/Profile.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import EditPetModal from './EditPetModal'; // Создадим этот компонент
+
+const API_BASE_URL = 'https://pets.xn--80ahdri7a.site';
 
 const Profile = ({ showNotification }) => {
   const navigate = useNavigate();
@@ -23,86 +26,183 @@ const Profile = ({ showNotification }) => {
     phone: '',
     email: ''
   });
+  
+  // Состояние для модального окна редактирования
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedPet, setSelectedPet] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-    
-    // Загрузка данных пользователя
-    loadUserData();
-    loadUserPets();
-  }, [user, navigate]);
-
-  const loadUserData = () => {
+  const loadUserPets = useCallback(async (token) => {
     try {
-      const savedName = localStorage.getItem('userName');
-      const savedPhone = localStorage.getItem('userPhone');
-      const savedEmail = localStorage.getItem('userEmail');
-      const savedDate = localStorage.getItem('registrationDate') || new Date().toISOString().split('T')[0];
-      
-      setUserData({
-        name: savedName || user?.name || 'Пользователь',
-        email: savedEmail || user?.email || '',
-        phone: savedPhone || user?.phone || '',
-        registrationDate: savedDate,
-        ordersCount: 0,
-        petsCount: 0
+      const response = await fetch(`${API_BASE_URL}/api/users/orders`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
       });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Объявления пользователя:', data);
+        
+        if (data.data?.orders) {
+          const pets = data.data.orders.map(order => ({
+            id: order.id,
+            kind: order.kind || 'Животное',
+            mark: order.mark || '',
+            district: order.district || '',
+            status: order.status || 'active',
+            photos: order.photos ? [`${API_BASE_URL}${order.photos}`] : [],
+            description: order.description || '',
+            date: order.date || ''
+          }));
+          
+          setUserPets(pets);
+        } else {
+          setUserPets([]);
+          console.log('Нет объявлений или неправильный формат ответа');
+        }
+      } else {
+        console.warn('Не удалось загрузить объявления:', response.status);
+        setUserPets([]);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки объявлений:', error);
+      setUserPets([]);
+    }
+  }, []);
+
+  const loadUserData = useCallback(async () => {
+    try {
+      if (!user || !user.token) {
+        navigate('/login');
+        return;
+      }
+
+      const token = user.token;
       
-      setEditForm({
-        name: savedName || user?.name || '',
-        phone: savedPhone || user?.phone || '',
-        email: savedEmail || user?.email || ''
+      // 1. Загружаем данные пользователя
+      const userResponse = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+
+      if (userResponse.ok) {
+        const userDataApi = await userResponse.json();
+        console.log('Данные пользователя с API:', userDataApi);
+        
+        // Обрабатываем структуру API
+        let userInfo;
+        if (userDataApi.id) {
+          userInfo = userDataApi;
+        } else if (userDataApi.data?.user?.[0]) {
+          userInfo = userDataApi.data.user[0];
+        } else if (userDataApi.data) {
+          userInfo = userDataApi.data;
+        }
+        
+        if (userInfo) {
+          const newUserData = {
+            name: userInfo.name || '',
+            email: userInfo.email || '',
+            phone: userInfo.phone || '',
+            registrationDate: userInfo.registrationDate || new Date().toISOString().split('T')[0],
+            ordersCount: userInfo.ordersCount || 0,
+            petsCount: userInfo.petsCount || 0,
+            id: userInfo.id
+          };
+          
+          setUserData(newUserData);
+          setEditForm({
+            name: userInfo.name || '',
+            phone: userInfo.phone || '',
+            email: userInfo.email || ''
+          });
+          
+          // 2. Загружаем объявления пользователя
+          await loadUserPets(token);
+        } else {
+          showNotification('Не удалось получить данные пользователя', 'warning');
+        }
+      } else if (userResponse.status === 401) {
+        showNotification('Сессия истекла. Войдите снова.', 'warning');
+        logout();
+        navigate('/login');
+      } else {
+        showNotification('Ошибка загрузки данных пользователя', 'danger');
+      }
     } catch (error) {
       console.error('Ошибка загрузки данных пользователя:', error);
       showNotification('Ошибка загрузки данных', 'danger');
     } finally {
       setIsLoading(false);
     }
+  }, [user, navigate, loadUserPets, logout, showNotification]);
+
+  useEffect(() => {
+    loadUserData();
+  }, [loadUserData]);
+
+  // Функция открытия модального окна редактирования
+  const handleEditPet = (pet) => {
+    // Проверяем, можно ли редактировать объявление
+    if (!canEditPet(pet)) {
+      showNotification('Это объявление нельзя редактировать', 'warning');
+      return;
+    }
+    
+    setSelectedPet(pet);
+    setEditModalOpen(true);
   };
 
-  const loadUserPets = async () => {
-    try {
-      const token = user?.token || localStorage.getItem('authToken');
-      if (!token) return;
-
-      // Здесь должен быть реальный запрос к API
-      // Пока имитируем данные
-      const mockPets = [
-        {
-          id: 1,
-          kind: 'Собака',
-          mark: 'VL-0214',
-          district: 'Приморский',
-          status: 'active',
-          photos: ['https://placebear.com/200/200'],
-          description: 'Дружелюбная собака, найдена в парке',
-          date: '2023-10-15'
-        },
-        {
-          id: 2,
-          kind: 'Кошка',
-          mark: '',
-          district: 'Центральный',
-          status: 'wasFound',
-          photos: ['https://placebear.com/200/200'],
-          description: 'Белая кошка с голубыми глазами',
-          date: '2023-10-12'
-        }
-      ];
-      
-      setUserPets(mockPets);
-      setUserData(prev => ({
-        ...prev,
-        ordersCount: mockPets.length,
-        petsCount: mockPets.filter(pet => pet.status === 'wasFound').length
-      }));
-    } catch (error) {
-      console.error('Ошибка загрузки объявлений:', error);
+  // Функция удаления объявления
+  const handleDeletePet = async (petId) => {
+    if (!window.confirm('Вы уверены, что хотите удалить это объявление?')) {
+      return;
     }
+
+    setIsDeleting(true);
+    try {
+      const token = user?.token;
+      const response = await fetch(`${API_BASE_URL}/api/pets/${petId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (response.ok) {
+        showNotification('Объявление успешно удалено!', 'success');
+        // Обновляем список объявлений
+        await loadUserPets(token);
+      } else if (response.status === 403) {
+        showNotification('Недостаточно прав для удаления', 'danger');
+      } else {
+        showNotification('Ошибка при удалении объявления', 'danger');
+      }
+    } catch (error) {
+      console.error('Ошибка удаления объявления:', error);
+      showNotification('Ошибка при удалении объявления', 'danger');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Функция обновления объявления после редактирования
+  const handlePetUpdated = () => {
+    showNotification('Объявление успешно обновлено!', 'success');
+    // Обновляем список объявлений
+    if (user?.token) {
+      loadUserPets(user.token);
+    }
+    setEditModalOpen(false);
+    setSelectedPet(null);
+  };
+
+  // Проверка, можно ли редактировать объявление
+  const canEditPet = (pet) => {
+    return pet.status === 'active' || pet.status === 'onModeration';
   };
 
   const handleEditProfile = () => {
@@ -110,7 +210,6 @@ const Profile = ({ showNotification }) => {
   };
 
   const handleSaveProfile = async () => {
-    // Валидация
     if (!editForm.name.trim()) {
       showNotification('Введите имя', 'danger');
       return;
@@ -127,23 +226,12 @@ const Profile = ({ showNotification }) => {
     }
 
     try {
-      const token = user?.token || localStorage.getItem('authToken');
-      // В реальном приложении здесь был бы запрос к API
-      // Пока просто обновляем локальные данные
-      
-      // Обновляем данные в контексте
       updateUser({
         name: editForm.name,
         phone: editForm.phone,
         email: editForm.email
       });
       
-      // Обновляем localStorage
-      localStorage.setItem('userName', editForm.name);
-      localStorage.setItem('userPhone', editForm.phone);
-      localStorage.setItem('userEmail', editForm.email);
-      
-      // Обновляем состояние
       setUserData(prev => ({
         ...prev,
         name: editForm.name,
@@ -169,35 +257,47 @@ const Profile = ({ showNotification }) => {
   };
 
   const getStatusText = (status) => {
-    switch (status) {
-      case 'active': return 'Активно';
-      case 'wasFound': return 'Хозяин найден';
-      case 'onModeration': return 'На модерации';
-      case 'archive': return 'В архиве';
-      default: return status;
-    }
+    const statusMap = {
+      'active': 'Активно',
+      'wasFound': 'Хозяин найден',
+      'onModeration': 'На модерации',
+      'archive': 'В архиве',
+      'published': 'Опубликовано',
+      'pending': 'На рассмотрении'
+    };
+    return statusMap[status] || status;
   };
 
   const getStatusClass = (status) => {
-    switch (status) {
-      case 'active': return 'bg-success';
-      case 'wasFound': return 'bg-info';
-      case 'onModeration': return 'bg-warning';
-      case 'archive': return 'bg-secondary';
-      default: return 'bg-secondary';
-    }
+    const classMap = {
+      'active': 'bg-success',
+      'wasFound': 'bg-info',
+      'onModeration': 'bg-warning',
+      'archive': 'bg-secondary',
+      'published': 'bg-success',
+      'pending': 'bg-warning'
+    };
+    return classMap[status] || 'bg-secondary';
   };
 
   const calculateDaysOnSite = (dateString) => {
-    const regDate = new Date(dateString);
-    const today = new Date();
-    const diffTime = Math.abs(today - regDate);
-    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    try {
+      const regDate = new Date(dateString);
+      const today = new Date();
+      const diffTime = Math.abs(today - regDate);
+      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    } catch {
+      return 0;
+    }
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU');
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ru-RU');
+    } catch {
+      return dateString;
+    }
   };
 
   if (isLoading) {
@@ -381,11 +481,18 @@ const Profile = ({ showNotification }) => {
                           {userPets.map(pet => (
                             <tr key={pet.id}>
                               <td>
-                                <img
-                                  src={pet.photos[0]}
-                                  alt={pet.kind}
-                                  style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }}
-                                />
+                                {pet.photos && pet.photos.length > 0 ? (
+                                  <img
+                                    src={pet.photos[0]}
+                                    alt={pet.kind}
+                                    style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }}
+                                    onError={(e) => {
+                                      e.target.src = 'https://via.placeholder.com/60x60?text=No+Photo';
+                                    }}
+                                  />
+                                ) : (
+                                  <div style={{ width: '60px', height: '60px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}></div>
+                                )}
                               </td>
                               <td>{pet.kind}</td>
                               <td>{pet.mark || 'Не указан'}</td>
@@ -396,15 +503,33 @@ const Profile = ({ showNotification }) => {
                                 </span>
                               </td>
                               <td>
-                                <button
-                                  className="btn btn-sm btn-outline-primary me-1"
-                                  onClick={() => navigate(`/pet/${pet.id}`)}
-                                >
-                                  Просмотр
-                                </button>
-                                <button className="btn btn-sm btn-outline-danger">
-                                  Удалить
-                                </button>
+                                <div className="btn-group" role="group">
+                                  <button
+                                    className="btn btn-sm btn-outline-primary me-1"
+                                    onClick={() => navigate(`/pet/${pet.id}`)}
+                                  >
+                                    Просмотр
+                                  </button>
+                                  {canEditPet(pet) && (
+                                    <button
+                                      className="btn btn-sm btn-outline-warning me-1"
+                                      onClick={() => handleEditPet(pet)}
+                                    >
+                                      <i className="bi bi-pencil"></i>
+                                    </button>
+                                  )}
+                                  <button
+                                    className="btn btn-sm btn-outline-danger"
+                                    onClick={() => handleDeletePet(pet.id)}
+                                    disabled={isDeleting}
+                                  >
+                                    {isDeleting ? (
+                                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    ) : (
+                                      <i className="bi bi-trash"></i>
+                                    )}
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -413,13 +538,25 @@ const Profile = ({ showNotification }) => {
                     </div>
                   )}
                 </div>
-                
-
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Модальное окно редактирования объявления */}
+      {editModalOpen && selectedPet && (
+        <EditPetModal
+          pet={selectedPet}
+          token={user?.token}
+          onClose={() => {
+            setEditModalOpen(false);
+            setSelectedPet(null);
+          }}
+          onSuccess={handlePetUpdated}
+          showNotification={showNotification}
+        />
+      )}
     </div>
   );
 };
