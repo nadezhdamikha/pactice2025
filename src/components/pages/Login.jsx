@@ -227,29 +227,9 @@ const Login = ({ showNotification }) => {
                     {errors.password && (
                       <div className="invalid-feedback">{errors.password}</div>
                     )}
-                    <div className="form-text text-end">
-                      <Link to="/forgot-password" className="text-decoration-none">
-                        Забыли пароль?
-                      </Link>
-                    </div>
+
                   </div>
-                  
-                  <div className="mb-4">
-                    <div className="form-check">
-                      <input
-                        type="checkbox"
-                        id="remember"
-                        name="remember"
-                        className="form-check-input"
-                        checked={formData.remember}
-                        onChange={handleInputChange}
-                        disabled={isLoading}
-                      />
-                      <label className="form-check-label" htmlFor="remember">
-                        Запомнить меня
-                      </label>
-                    </div>
-                  </div>
+
                   
                   <div className="d-grid gap-2">
                     <button
@@ -269,22 +249,7 @@ const Login = ({ showNotification }) => {
                         </>
                       )}
                     </button>
-                    
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={handleFillExample}
-                      disabled={isLoading}
-                    >
-                      <i className="bi bi-lightning me-2"></i>
-                      Заполнить пример
-                    </button>
-                    
-                    <div className="text-center mt-3">
-                      <small className="text-muted">
-                        Нет аккаунта? <Link to="/register" className="text-decoration-none">Зарегистрироваться</Link>
-                      </small>
-                    </div>
+
                   </div>
                 </form>
               </div>

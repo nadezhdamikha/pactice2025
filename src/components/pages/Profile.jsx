@@ -1,15 +1,13 @@
-// src/components/pages/Profile.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import EditPetModal from './EditPetModal'; // Создадим этот компонент
+import EditPetModal from './EditPetModal';
 
-const API_BASE_URL = 'https://pets.xn--80ahdri7a.site';
+const API_BASE_URL = 'https://pets.сделай.site';
 
 const Profile = ({ showNotification }) => {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuth();
-  
   const [userData, setUserData] = useState({
     name: '',
     email: '',
@@ -18,6 +16,7 @@ const Profile = ({ showNotification }) => {
     ordersCount: 0,
     petsCount: 0
   });
+
   const [userPets, setUserPets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -26,11 +25,11 @@ const Profile = ({ showNotification }) => {
     phone: '',
     email: ''
   });
-  
-  // Состояние для модального окна редактирования
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedPet, setSelectedPet] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deletePetId, setDeletePetId] = useState(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   const loadUserPets = useCallback(async (token) => {
     try {
@@ -39,11 +38,11 @@ const Profile = ({ showNotification }) => {
           'Authorization': `Bearer ${token}`,
         }
       });
-
+     
       if (response.ok) {
         const data = await response.json();
         console.log('Объявления пользователя:', data);
-        
+       
         if (data.data?.orders) {
           const pets = data.data.orders.map(order => ({
             id: order.id,
@@ -55,14 +54,14 @@ const Profile = ({ showNotification }) => {
             description: order.description || '',
             date: order.date || ''
           }));
-          
+         
           setUserPets(pets);
         } else {
           setUserPets([]);
           console.log('Нет объявлений или неправильный формат ответа');
         }
       } else {
-        console.warn('Не удалось загрузить объявления:', response.status);
+        console.warn('Не удалось загрузить объявлений:', response.status);
         setUserPets([]);
       }
     } catch (error) {
@@ -77,23 +76,22 @@ const Profile = ({ showNotification }) => {
         navigate('/login');
         return;
       }
-
+     
       const token = user.token;
-      
-      // 1. Загружаем данные пользователя
+     
       const userResponse = await fetch(`${API_BASE_URL}/api/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-
+     
       if (userResponse.ok) {
         const userDataApi = await userResponse.json();
         console.log('Данные пользователя с API:', userDataApi);
-        
-        // Обрабатываем структуру API
+       
         let userInfo;
+       
         if (userDataApi.id) {
           userInfo = userDataApi;
         } else if (userDataApi.data?.user?.[0]) {
@@ -101,7 +99,7 @@ const Profile = ({ showNotification }) => {
         } else if (userDataApi.data) {
           userInfo = userDataApi.data;
         }
-        
+       
         if (userInfo) {
           const newUserData = {
             name: userInfo.name || '',
@@ -112,15 +110,14 @@ const Profile = ({ showNotification }) => {
             petsCount: userInfo.petsCount || 0,
             id: userInfo.id
           };
-          
+         
           setUserData(newUserData);
           setEditForm({
             name: userInfo.name || '',
             phone: userInfo.phone || '',
             email: userInfo.email || ''
           });
-          
-          // 2. Загружаем объявления пользователя
+         
           await loadUserPets(token);
         } else {
           showNotification('Не удалось получить данные пользователя', 'warning');
@@ -144,55 +141,87 @@ const Profile = ({ showNotification }) => {
     loadUserData();
   }, [loadUserData]);
 
-  // Функция открытия модального окна редактирования
   const handleEditPet = (pet) => {
-    // Проверяем, можно ли редактировать объявление
     if (!canEditPet(pet)) {
       showNotification('Это объявление нельзя редактировать', 'warning');
       return;
     }
-    
+   
     setSelectedPet(pet);
     setEditModalOpen(true);
   };
 
-  // Функция удаления объявления
   const handleDeletePet = async (petId) => {
     if (!window.confirm('Вы уверены, что хотите удалить это объявление?')) {
       return;
     }
-
     setIsDeleting(true);
+    setDeletePetId(petId);
+   
     try {
       const token = user?.token;
-      const response = await fetch(`${API_BASE_URL}/api/pets/${petId}`, {
+      console.log(`Удаление объявления ${petId} с токеном: ${token?.substring(0, 20)}...`);
+     
+      const response = await fetch(`${API_BASE_URL}/api/users/orders/${petId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
-
+     
+      console.log('Ответ при удалении:', response.status);
+     
       if (response.ok) {
+        const responseData = await response.json();
+        console.log('Успешное удаление:', responseData);
+       
         showNotification('Объявление успешно удалено!', 'success');
-        // Обновляем список объявлений
-        await loadUserPets(token);
+       
+        setUserPets(prev => prev.filter(pet => pet.id !== petId));
+       
+        setUserData(prev => ({
+          ...prev,
+          ordersCount: Math.max(0, prev.ordersCount - 1)
+        }));
+       
+      } else if (response.status === 401) {
+        showNotification('Сессия истекла. Войдите снова.', 'warning');
+        logout();
+        navigate('/login');
       } else if (response.status === 403) {
-        showNotification('Недостаточно прав для удаления', 'danger');
+        showNotification('Недостаточно прав для удаления этого объявления', 'danger');
+      } else if (response.status === 404) {
+        showNotification('Объявление не найдено', 'warning');
+      } else if (response.status === 405) {
+        showNotification('Метод DELETE не поддерживается для этого эндпоинта', 'danger');
+        console.error('Метод DELETE не поддерживается. Проверьте API документацию.');
       } else {
-        showNotification('Ошибка при удалении объявления', 'danger');
+        try {
+          const errorData = await response.json();
+          const errorMsg = errorData.error?.message || errorData.message || `Ошибка сервера: ${response.status}`;
+          showNotification(errorMsg, 'danger');
+        } catch {
+          showNotification(`Ошибка сервера: ${response.status}`, 'danger');
+        }
       }
+     
     } catch (error) {
       console.error('Ошибка удаления объявления:', error);
-      showNotification('Ошибка при удалении объявления', 'danger');
+     
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        showNotification('Не удалось подключиться к серверу. Проверьте интернет-соединение.', 'danger');
+      } else {
+        showNotification('Произошла ошибка при удалении объявления', 'danger');
+      }
     } finally {
       setIsDeleting(false);
+      setDeletePetId(null);
     }
   };
 
-  // Функция обновления объявления после редактирования
   const handlePetUpdated = () => {
     showNotification('Объявление успешно обновлено!', 'success');
-    // Обновляем список объявлений
     if (user?.token) {
       loadUserPets(user.token);
     }
@@ -200,8 +229,11 @@ const Profile = ({ showNotification }) => {
     setSelectedPet(null);
   };
 
-  // Проверка, можно ли редактировать объявление
   const canEditPet = (pet) => {
+    return pet.status === 'active' || pet.status === 'onModeration';
+  };
+
+  const canDeletePet = (pet) => {
     return pet.status === 'active' || pet.status === 'onModeration';
   };
 
@@ -214,36 +246,116 @@ const Profile = ({ showNotification }) => {
       showNotification('Введите имя', 'danger');
       return;
     }
-    
+   
     if (!editForm.email.trim()) {
       showNotification('Введите email', 'danger');
       return;
     }
-    
+   
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editForm.email)) {
+      showNotification('Введите корректный email', 'danger');
+      return;
+    }
+   
     if (!editForm.phone.trim()) {
       showNotification('Введите телефон', 'danger');
       return;
     }
 
+    setIsUpdatingProfile(true);
+   
     try {
-      updateUser({
-        name: editForm.name,
-        phone: editForm.phone,
-        email: editForm.email
-      });
-      
-      setUserData(prev => ({
-        ...prev,
-        name: editForm.name,
-        phone: editForm.phone,
-        email: editForm.email
-      }));
-      
-      showNotification('Профиль успешно обновлен!', 'success');
+      const updates = [];
+      let updatedFields = {};
+
+      // Обновляем имя в контексте (если API для этого нет)
+      if (editForm.name !== userData.name) {
+        updates.push('имя');
+        updatedFields.name = editForm.name;
+        updateUser({ name: editForm.name });
+      }
+
+      // Обновляем телефон через API PATCH
+      if (editForm.phone !== userData.phone) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/users/phone`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user.token}`
+            },
+            body: JSON.stringify({
+              phone: editForm.phone
+            })
+          });
+
+          if (response.ok) {
+            updates.push('телефон');
+            updatedFields.phone = editForm.phone;
+            console.log('Телефон успешно обновлен через API');
+          } else {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || errorData.message || 'Ошибка обновления телефона');
+          }
+        } catch (error) {
+          showNotification(`Ошибка обновления телефона: ${error.message}`, 'danger');
+          return;
+        }
+      }
+
+      // Обновляем email через API PATCH
+      if (editForm.email !== userData.email) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/users/email`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user.token}`
+            },
+            body: JSON.stringify({
+              email: editForm.email
+            })
+          });
+
+          if (response.ok) {
+            updates.push('email');
+            updatedFields.email = editForm.email;
+            console.log('Email успешно обновлен через API');
+          } else {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || errorData.message || 'Ошибка обновления email');
+          }
+        } catch (error) {
+          showNotification(`Ошибка обновления email: ${error.message}`, 'danger');
+          return;
+        }
+      }
+
+      // Если были обновления через API или локально
+      if (updates.length > 0) {
+        setUserData(prev => ({
+          ...prev,
+          ...updatedFields
+        }));
+
+        // Обновляем только те поля, которые есть в updatedFields
+        if (Object.keys(updatedFields).length > 0) {
+          updateUser(updatedFields);
+        }
+
+        showNotification(`Профиль успешно обновлен! Обновлено: ${updates.join(', ')}`, 'success');
+      } else {
+        showNotification('Нет изменений для сохранения', 'info');
+      }
+     
       setIsEditing(false);
-      
+     
     } catch (error) {
+      console.error('Ошибка при обновлении профиля:', error);
       showNotification('Ошибка при обновлении профиля', 'danger');
+    } finally {
+      setIsUpdatingProfile(false);
     }
   };
 
@@ -329,8 +441,7 @@ const Profile = ({ showNotification }) => {
                     Выйти
                   </button>
                 </div>
-                
-                {/* Информация о пользователе */}
+               
                 <div className="row mb-5">
                   <div className="col-md-4 text-center">
                     <div className="profile-avatar bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3"
@@ -342,7 +453,7 @@ const Profile = ({ showNotification }) => {
                       На сайте {calculateDaysOnSite(userData.registrationDate)} дней
                     </p>
                   </div>
-                  
+                 
                   <div className="col-md-8">
                     <div className="row">
                       <div className="col-md-6 mb-3">
@@ -354,6 +465,7 @@ const Profile = ({ showNotification }) => {
                             value={editForm.email}
                             onChange={(e) => setEditForm({...editForm, email: e.target.value})}
                             required
+                            disabled={isUpdatingProfile}
                           />
                         ) : (
                           <input
@@ -364,7 +476,7 @@ const Profile = ({ showNotification }) => {
                           />
                         )}
                       </div>
-                      
+                     
                       <div className="col-md-6 mb-3">
                         <label className="form-label">Телефон <span className="text-danger">*</span></label>
                         {isEditing ? (
@@ -375,6 +487,7 @@ const Profile = ({ showNotification }) => {
                             onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
                             pattern="[\+\d]+"
                             required
+                            disabled={isUpdatingProfile}
                           />
                         ) : (
                           <input
@@ -385,7 +498,7 @@ const Profile = ({ showNotification }) => {
                           />
                         )}
                       </div>
-                      
+                     
                       <div className="col-md-6 mb-3">
                         <label className="form-label">Дата регистрации</label>
                         <input
@@ -395,7 +508,7 @@ const Profile = ({ showNotification }) => {
                           readOnly
                         />
                       </div>
-                      
+                     
                       <div className="col-md-6 mb-3">
                         <label className="form-label">Количество объявлений</label>
                         <input
@@ -405,7 +518,7 @@ const Profile = ({ showNotification }) => {
                           readOnly
                         />
                       </div>
-                      
+                     
                       <div className="col-12 mb-3">
                         <label className="form-label">Имя</label>
                         {isEditing ? (
@@ -415,6 +528,7 @@ const Profile = ({ showNotification }) => {
                             value={editForm.name}
                             onChange={(e) => setEditForm({...editForm, name: e.target.value})}
                             required
+                            disabled={isUpdatingProfile}
                           />
                         ) : (
                           <input
@@ -426,14 +540,27 @@ const Profile = ({ showNotification }) => {
                         )}
                       </div>
                     </div>
-                    
+                   
                     <div className="d-flex gap-2">
                       {isEditing ? (
                         <>
-                          <button className="btn btn-primary" onClick={handleSaveProfile}>
-                            Сохранить изменения
+                          <button 
+                            className="btn btn-primary" 
+                            onClick={handleSaveProfile}
+                            disabled={isUpdatingProfile}
+                          >
+                            {isUpdatingProfile ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Сохранение...
+                              </>
+                            ) : 'Сохранить изменения'}
                           </button>
-                          <button className="btn btn-outline-secondary" onClick={handleCancelEdit}>
+                          <button 
+                            className="btn btn-outline-secondary" 
+                            onClick={handleCancelEdit}
+                            disabled={isUpdatingProfile}
+                          >
                             Отменить
                           </button>
                         </>
@@ -445,17 +572,12 @@ const Profile = ({ showNotification }) => {
                     </div>
                   </div>
                 </div>
-                
-                {/* Мои объявления */}
+               
                 <div className="mb-5">
                   <div className="d-flex justify-content-between align-items-center mb-3">
                     <h4 className="mb-0">Мои объявления</h4>
-                    <button className="btn btn-primary" onClick={() => navigate('/add-pet')}>
-                      <i className="bi bi-plus-circle me-2"></i>
-                      Добавить объявление
-                    </button>
                   </div>
-                  
+                 
                   {userPets.length === 0 ? (
                     <div className="text-center py-4">
                       <i className="bi bi-inbox display-4 text-muted mb-3"></i>
@@ -518,17 +640,28 @@ const Profile = ({ showNotification }) => {
                                       <i className="bi bi-pencil"></i>
                                     </button>
                                   )}
-                                  <button
-                                    className="btn btn-sm btn-outline-danger"
-                                    onClick={() => handleDeletePet(pet.id)}
-                                    disabled={isDeleting}
-                                  >
-                                    {isDeleting ? (
-                                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                    ) : (
+                                  {canDeletePet(pet) && (
+                                    <button
+                                      className="btn btn-sm btn-outline-danger"
+                                      onClick={() => handleDeletePet(pet.id)}
+                                      disabled={isDeleting && deletePetId === pet.id}
+                                    >
+                                      {isDeleting && deletePetId === pet.id ? (
+                                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                      ) : (
+                                        <i className="bi bi-trash"></i>
+                                      )}
+                                    </button>
+                                  )}
+                                  {!canDeletePet(pet) && (
+                                    <button
+                                      className="btn btn-sm btn-outline-secondary"
+                                      disabled
+                                      title="Это объявление нельзя удалить (возможно, уже удалено или имеет другой статус)"
+                                    >
                                       <i className="bi bi-trash"></i>
-                                    )}
-                                  </button>
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -543,8 +676,7 @@ const Profile = ({ showNotification }) => {
           </div>
         </div>
       </div>
-
-      {/* Модальное окно редактирования объявления */}
+     
       {editModalOpen && selectedPet && (
         <EditPetModal
           pet={selectedPet}

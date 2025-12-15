@@ -267,20 +267,7 @@ const Register = ({ showNotification }) => {
     }
   };
 
-  // Обработчик для отображения примера заполнения
-  const handleFillExample = () => {
-    setFormData({
-      name: 'Иван Иванов',
-      phone: '+79161234567',
-      email: 'example@mail.ru',
-      password: 'Password1',
-      password_confirmation: 'Password1',
-      confirm: 1
-    });
-    
-    // Очищаем ошибки
-    setErrors({});
-  };
+
 
   // Проверка силы пароля
   const getPasswordStrength = (password) => {
@@ -509,11 +496,7 @@ const Register = ({ showNotification }) => {
                         {errors.confirm}
                       </div>
                     )}
-                    <div className="form-text">
-                      <small>
-                        Ознакомьтесь с <Link to="/privacy" className="text-decoration-none">Политикой конфиденциальности</Link>
-                      </small>
-                    </div>
+
                   </div>
                   
                   {/* Кнопки */}
@@ -536,34 +519,12 @@ const Register = ({ showNotification }) => {
                       )}
                     </button>
                     
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary"
-                      onClick={handleFillExample}
-                      disabled={isLoading}
-                    >
-                      <i className="bi bi-lightning me-2"></i>
-                      Заполнить пример
-                    </button>
+
                     
-                    <div className="text-center mt-3">
-                      <small className="text-muted">
-                        Уже есть аккаунт? <Link to="/login" className="text-decoration-none">Войти</Link>
-                      </small>
-                    </div>
+
                   </div>
                 </form>
                 
-                {/* Информация о требованиях */}
-                <div className="mt-4 pt-3 border-top">
-                  <h6 className="mb-2">Требования к данным:</h6>
-                  <ul className="small text-muted mb-0">
-                    <li><strong>Имя:</strong> только кириллические буквы, пробелы и дефисы</li>
-                    <li><strong>Телефон:</strong> только цифры и знак +, минимум 10 цифр</li>
-                    <li><strong>Пароль:</strong> минимум 7 символов, 1 заглавная, 1 строчная буква, 1 цифра</li>
-                    <li><strong>Согласие:</strong> обязательно для регистрации</li>
-                  </ul>
-                </div>
               </div>
             </div>
           </div>

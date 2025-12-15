@@ -240,7 +240,7 @@ function AddPet({ showNotification }) {
       let isNewRegistration = false;
       
       // 1. Если пользователь НЕ авторизован - регистрируем и логиним
-      if (!isAuthenticated) {
+      if (!isAuthenticated ) {
         // Регистрируем пользователя
         const registrationResult = await registerUser({
           name: formData.name,
@@ -251,7 +251,7 @@ function AddPet({ showNotification }) {
         });
         
         if (!registrationResult.success) {
-          showNotification(`Ошибка регистрации: ${registrationResult.error}`, 'danger');
+          showNotification(`Ошибка регистрации: The email has already been taken`, 'danger');
           setIsSubmitting(false);
           return;
         }
