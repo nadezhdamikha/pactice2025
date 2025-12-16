@@ -148,7 +148,7 @@ const PetsCardsSection = () => {
             <div key={pet.id} className="col-md-6 col-lg-4 mb-4 fade-in">
               <div className="card h-100 pet-card">
                 <div className="position-relative">
-                  <img 
+                  <img loading="lazy"
                     src={getImageUrl(pet.photo)} 
                     className="card-img-top" 
                     alt={pet.kind}

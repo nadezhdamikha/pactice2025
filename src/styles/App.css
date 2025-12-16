@@ -19,15 +19,152 @@ h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, .card-title {
     font-weight: 600;
 }
 
-/* Герой секция */
+/* ========== ХЕДЕР ========== */
+.navbar {
+    min-height: 60px;
+}
+
+.navbar > .container-fluid {
+    display: flex;
+    align-items: center;
+    height: 60px;
+}
+
+.navbar-brand {
+    height: 38px;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-nav .nav-link {
+    display: flex;
+    align-items: center;
+    height: 38px;
+    padding: 0 1rem !important;
+}
+
+/* Быстрый поиск */
+.quick-search-container {
+    display: flex;
+    align-items: center;
+    height: 38px;
+}
+
+.quick-search-container form {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+}
+
+.quick-search-container input {
+    height: 38px !important;
+}
+
+.quick-search-container button {
+    height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Кнопки авторизации */
+#auth-buttons .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    padding: 0.375rem 1rem;
+}
+
+/* Выпадающее меню пользователя */
+#user-menu .btn {
+    display: flex;
+    align-items: center;
+    height: 38px;
+    padding: 0.375rem 1rem;
+}
+
+/* Мобильная версия хедера */
+@media (max-width: 991.98px) {
+    .navbar {
+        min-height: auto;
+    }
+    
+    .navbar > .container-fluid {
+        height: auto;
+    }
+    
+    .navbar-collapse .d-flex {
+        flex-direction: column;
+    }
+    
+    .navbar-nav {
+        flex-direction: row;
+        justify-content: center;
+        margin: 10px 0;
+        width: 100%;
+    }
+    
+    .navbar-nav .nav-item {
+        margin: 0 10px;
+    }
+    
+    .flex-grow-1.mx-3 {
+        margin: 10px 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .d-flex.align-items-center.ms-auto {
+        margin: 10px 0;
+        justify-content: center;
+        width: 100%;
+    }
+}
+
+/* Десктопная версия хедера */
+@media (min-width: 992px) {
+    .navbar-collapse .d-flex {
+        align-items: center;
+        height: 38px;
+    }
+    
+    /* Гарантируем, что все инлайн-элементы имеют одинаковую высоту */
+    .navbar-brand,
+    .navbar-nav .nav-link,
+    .quick-search-container input,
+    .quick-search-container button,
+    #auth-buttons .btn,
+    #user-menu .btn {
+        height: 38px;
+        box-sizing: border-box;
+    }
+    
+    .navbar-collapse {
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+    
+    .navbar > .container {
+        align-items: center;
+    }
+}
+
+/* ========== ГЕРОЙ СЕКЦИЯ ========== */
 .hero-section {
     background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://placebear.com/1200/800');
     background-size: cover;
     background-position: center;
     color: white;
-    padding: 100px 0;
+    padding: 120px 0;
     text-align: center;
     width: 100%;
+}
+
+.hero-section .container {
+    max-width: 800px;
 }
 
 .hero-title {
@@ -45,13 +182,13 @@ h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, .card-title {
     margin-bottom: 1.5rem;
 }
 
-/* Слайдер */
+/* ========== СЛАЙДЕР ========== */
 .slider-container {
     position: relative;
     overflow: hidden;
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    height: 400px; /* Фиксированная высота */
+    height: 400px;
     width: 100%;
 }
 
@@ -119,7 +256,7 @@ h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, .card-title {
     transform: scale(1.1);
 }
 
-/* Карточки животных */
+/* ========== КАРТОЧКИ ЖИВОТНЫХ ========== */
 .card-img-top {
     height: 200px;
     object-fit: cover;
@@ -170,6 +307,7 @@ h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, .card-title {
     color: var(--primary-color);
 }
 
+/* ========== КНОПКИ И ФОРМЫ ========== */
 .btn-animate {
     transition: transform 0.2s;
 }
@@ -178,7 +316,6 @@ h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, .card-title {
     transform: translateY(-2px);
 }
 
-/* Форма подписки */
 .input-group {
     display: flex;
 }
@@ -199,7 +336,7 @@ h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, .card-title {
     margin-top: 0.5rem;
 }
 
-/* Анимации */
+/* ========== АНИМАЦИИ ========== */
 .fade-in {
     animation: fadeIn 0.5s ease-in;
 }
@@ -209,134 +346,26 @@ h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, .card-title {
     to { opacity: 1; }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .hero-title {
-        font-size: 2.5rem;
-    }
-    
-    .hero-subtitle {
-        font-size: 1.2rem;
-    }
-    
-    .slider-container {
-        height: 500px;
-    }
-    
-    .slider-item {
-        flex-direction: column;
-    }
-    
-    .slider-item .row {
-        flex-direction: column;
-    }
-    
-    .slider-item .row .col-md-5,
-    .slider-item .row .col-md-7 {
-        width: 100%;
-        padding: 0;
-    }
-    
-    .slider-item .row .col-md-5 img {
-        height: 200px;
-        margin-bottom: 20px;
-    }
-    
-    .slider-controls button {
-        width: 40px;
-        height: 40px;
-    }
+.slide-in {
+    animation: slideIn 0.5s ease-out;
 }
 
-:root {
-    --primary-color: #0d6efd;
-    --secondary-color: #6f42c1;
-    --accent-color: #20c997;
+@keyframes slideIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
-body {
-    font-family: 'Roboto', sans-serif;
-    line-height: 1.6;
+.pulse {
+    animation: pulse 2s infinite;
 }
 
-h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, .card-title {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 }
 
-.hero-section {
-    background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://placebear.com/1200/800');
-    background-size: cover;
-    background-position: center;
-    color: white;
-    padding: 100px 0;
-    text-align: center;
-}
-
-.hero-title {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 700;
-    font-size: 3.5rem;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    margin-bottom: 1rem;
-}
-
-.hero-subtitle {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 400;
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.card-img-top {
-    height: 200px;
-    object-fit: cover;
-}
-
-.slider-container {
-    position: relative;
-    overflow: hidden;
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-.slider-track {
-    display: flex;
-    transition: transform 0.5s ease;
-}
-
-.slider-item {
-    min-width: 100%;
-    padding: 20px;
-}
-
-.slider-controls {
-    position: absolute;
-    top: 50%;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    transform: translateY(-50%);
-    padding: 0 20px;
-}
-
-.slider-controls button {
-    background-color: rgba(255,255,255,0.8);
-    border: none;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s;
-}
-
-.slider-controls button:hover {
-    background-color: white;
-    transform: scale(1.1);
-}
-
+/* ========== РАЗНОЕ ========== */
 .notification {
     position: fixed;
     top: 20px;
@@ -349,45 +378,6 @@ h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, .card-title {
 
 .notification.show {
     opacity: 1;
-}
-
-.btn-animate {
-    transition: transform 0.2s;
-}
-
-.btn-animate:hover {
-    transform: translateY(-2px);
-}
-
-.pet-card {
-    transition: transform 0.3s, box-shadow 0.3s;
-    border: none;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.pet-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-}
-
-.section-title {
-    position: relative;
-    margin-bottom: 1rem;
-    margin-top: 3rem;
-    padding-bottom: 0.5rem;
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-}
-
-.section-title:after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 3px;
-    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
 }
 
 .stats-section {
@@ -443,17 +433,6 @@ h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, .card-title {
     padding: 20px;
 }
 
-.pet-feature {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.pet-feature i {
-    width: 30px;
-    color: var(--primary-color);
-}
-
 .search-results {
     min-height: 300px;
 }
@@ -507,82 +486,567 @@ h1, h2, h3, h4, h5, h6, .navbar-brand, .btn, .card-title {
     display: none;
 }
 
-.fade-in {
-    animation: fadeIn 0.5s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.slide-in {
-    animation: slideIn 0.5s ease-out;
-}
-
-@keyframes slideIn {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.pulse {
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-/* Исправления для мобильного меню */
-.navbar-collapse {
-    text-align: center;
-}
-
-.navbar-nav {
-    margin-bottom: 10px;
-}
-
-@media (max-width: 991.98px) {
-    .navbar .d-flex {
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.2rem;
+    }
+    
+    .slider-container {
+        height: 500px;
+    }
+    
+    .slider-item {
         flex-direction: column;
-        margin-left: 0 !important;
     }
-    .navbar form {
+    
+    .slider-item .row {
+        flex-direction: column;
+    }
+    
+    .slider-item .row .col-md-5,
+    .slider-item .row .col-md-7 {
         width: 100%;
-        margin-top: 10px;
-        margin-left: 0 !important;
+        padding: 0;
     }
-    .navbar form .d-flex {
-        flex-direction: row;
+    
+    .slider-item .row .col-md-5 img {
+        height: 200px;
+        margin-bottom: 20px;
     }
-    .navbar .d-flex .btn {
-        margin-bottom: 5px;
+    
+    .slider-controls button {
+        width: 40px;
+        height: 40px;
     }
 }
 
+/* ========== СТИЛИ ДЛЯ НОВОГО ХЕДЕРА ========== */
+.navbar {
+    min-height: 70px;
+    transition: all 0.3s ease;
+}
+
+.navbar-brand {
+    padding: 0.5rem 0;
+}
+
+.logo-circle {
+    transition: transform 0.3s ease;
+}
+
+.navbar-brand:hover .logo-circle {
+    transform: rotate(15deg);
+}
+
+.nav-link {
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    margin: 2px 0;
+}
+
+.nav-link:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    transform: translateY(-1px);
+}
+
+.nav-link.active {
+    background-color: rgba(13, 110, 253, 0.15);
+    color: var(--primary-color) !important;
+}
+
+.search-container {
+    min-width: 200px;
+}
+
+.auth-container .btn {
+    transition: all 0.2s ease;
+    padding: 0.5rem 1rem;
+}
+
+.auth-container .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.user-menu .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+}
+
+.user-menu .dropdown-menu {
+    border: none;
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+.user-menu .dropdown-item {
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    margin: 2px 0;
+}
+
+.user-menu .dropdown-item:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+/* Мобильная версия */
+@media (max-width: 991.98px) {
+    .navbar {
+        min-height: auto;
+        padding: 0.5rem 0;
+    }
+    
+    .navbar-collapse {
+        background-color: white;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .navbar-nav {
+        margin-bottom: 1rem;
+        
+        padding-bottom: 1rem;
+    }
+    
+    .nav-link {
+        margin: 0.25rem 0;
+        padding: 0.75rem 1rem !important;
+    }
+    
+    .search-container {
+        margin: 1rem 0;
+        order: 3;
+    }
+    
+    .auth-container {
+        order: 2;
+        margin-top: 1rem;
+        padding-top: 1rem;
+
+    }
+    
+    .auth-container .d-flex {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .auth-container .btn {
+        flex: 1;
+        text-align: center;
+        margin: 1rem;
+    }
+}
+
+/* Десктопная версия */
 @media (min-width: 992px) {
-    .navbar .d-flex {
+    .navbar-collapse {
+        display: flex !important;
+        flex-basis: auto;
+    }
+    
+    .navbar-nav {
         flex-direction: row;
+        align-items: center;
+    }
+    
+    .search-container {
+        max-width: 500px;
+        margin-left: 1rem;
+        margin-right: 1rem;
+    }
+    
+    .auth-container {
         margin-left: auto;
     }
-    .navbar form {
-        margin-left: 15px;
-        margin-top: 0;
-        width: auto;
+    
+    /* Выравниваем все элементы по высоте */
+    .navbar-brand,
+    .navbar-nav .nav-link,
+    .auth-container .btn {
+        height: 44px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .search-container input,
+    .search-container button {
+        height: 38px;
     }
 }
-.hero-section {
-  background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://placebear.com/1200/800');
-  background-size: cover;
-  background-position: center;
-  color: white;
-  padding: 120px 0;
-  text-align: center;
-  width: 100%;
+
+/* Анимации */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.hero-section .container {
-  max-width: 800px; /* Ограничиваем ширину текста */
+.navbar-collapse.show {
+    animation: slideDown 0.3s ease;
 }
+
+/* Улучшения для темной темы */
+@media (prefers-color-scheme: dark) {
+    .navbar {
+        background-color: #c9c9c9f6 !important;
+    }
+    
+    .navbar-light .navbar-nav .nav-link {
+        color: #e2e8f0 !important;
+    }
+    
+    .navbar-collapse {
+        background-color: #fffffff6 !important;
+    }
+    
+    .nav-link:hover {
+        background-color: rgba(66, 153, 225, 0.2);
+    }
+}
+
+/* =====================================================
+   HEADER OVERRIDE — ТОЛЬКО ХЕДЕР, БЕЗ ДРУГИХ КОМПОНЕНТОВ
+   ===================================================== */
+
+   .navbar {
+    min-height: 70px;
+    background-color: #f8f9fa;
+    transition: box-shadow 0.3s ease;
+}
+
+.navbar > .container,
+.navbar > .container-fluid {
+    display: flex;
+    align-items: center;
+    min-height: 70px;
+}
+
+/* ---------- LOGO ---------- */
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    padding: 0;
+}
+
+.navbar-brand img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+/* ---------- NAV LINKS ---------- */
+.navbar-nav {
+    align-items: center;
+}
+
+.navbar-nav .nav-link {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px !important;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    transform: translateY(-1px);
+}
+
+/* ---------- SEARCH ---------- */
+.search-container,
+.quick-search-container {
+    display: flex;
+    align-items: center;
+    height: 44px;
+}
+
+.quick-search-container input,
+.quick-search-container button {
+    height: 38px !important;
+}
+
+/* ---------- AUTH BUTTONS ---------- */
+.auth-container .btn,
+#auth-buttons .btn,
+#user-menu .btn {
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---------- USER DROPDOWN ---------- */
+.user-menu .dropdown-menu {
+    border-radius: 8px;
+    border: none;
+    margin-top: 8px;
+}
+
+.user-menu .dropdown-item {
+    border-radius: 6px;
+    padding: 10px 14px;
+}
+
+.user-menu .dropdown-item:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+/* ---------- MOBILE ---------- */
+@media (max-width: 991.98px) {
+    .navbar {
+        min-height: auto;
+        padding: 8px 0;
+    }
+
+    .navbar-collapse {
+        margin-top: 12px;
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    }
+
+    .navbar-nav {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .navbar-nav .nav-link {
+        width: 100%;
+        height: auto;
+        padding: 12px 14px !important;
+    }
+
+    .search-container,
+    .quick-search-container {
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .auth-container {
+        margin-top: 10px;
+    }
+
+    .auth-container .btn {
+        width: 100%;
+    }
+}
+
+/* =====================================================
+   HEADER BACKGROUND FIX
+   Mobile: white background
+   Desktop: transparent elements
+   ===================================================== */
+
+/* ===== DESKTOP (PC) ===== */
+@media (min-width: 992px) {
+    /* Убираем белые подложки */
+    .navbar,
+    .navbar-collapse,
+    .navbar-nav,
+    .search-container,
+    .quick-search-container,
+    .auth-container {
+        background-color: transparent !important;
+        box-shadow: none !important;
+    }
+
+    /* Ссылки */
+    .navbar-nav .nav-link {
+        background-color: transparent !important;
+    }
+
+    /* Кнопки */
+    .auth-container .btn,
+    #auth-buttons .btn,
+    #user-menu .btn {
+        background-color: transparent !important;
+    }
+
+    /* Поиск */
+    .quick-search-container input {
+        background-color: transparent !important;
+    }
+
+    /* Dropdown */
+    .user-menu .dropdown-menu {
+        background-color: #ffffff;
+    }
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 991.98px) {
+    /* Белая подложка только для меню */
+    .navbar-collapse {
+        background-color: #ffffff !important;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    }
+
+    /* Элементы внутри остаются чистыми */
+    .navbar-nav .nav-link,
+    .auth-container .btn,
+    .quick-search-container input {
+        background-color: transparent;
+    }
+}
+
+/* =====================================================
+   BUTTON TEXT FIX — DESKTOP
+   ===================================================== */
+
+   @media (min-width: 992px) {
+
+    /* Регистрация (btn-primary) */
+    .auth-container .btn-primary {
+        color: var(--primary-color) !important;
+        background-color: transparent !important;
+        border: 1px solid var(--primary-color);
+    }
+
+    .auth-container .btn-primary:hover {
+        background-color: var(--primary-color) !important;
+        color: #ffffff !important;
+    }
+
+    /* Войти (outline) */
+    .auth-container .btn-outline-primary {
+        color: var(--primary-color) !important;
+        background-color: transparent !important;
+        border: 1px solid var(--primary-color);
+    }
+
+    .auth-container .btn-outline-primary:hover {
+        background-color: var(--primary-color) !important;
+        color: #ffffff !important;
+    }
+
+    /* Dropdown button (профиль) */
+    #user-menu .btn,
+    .user-menu .btn {
+        color: var(--primary-color) !important;
+        background-color: transparent !important;
+        border: 1px solid var(--primary-color);
+    }
+
+    #user-menu .btn:hover,
+    .user-menu .btn:hover {
+        background-color: var(--primary-color) !important;
+        color: #ffffff !important;
+    }
+}
+
+/* =====================================================
+   MOBILE AUTH BUTTON FIX
+   ===================================================== */
+
+   @media (max-width: 991.98px) {
+
+    /* Контейнер авторизации */
+    .auth-container {
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+
+    .auth-container .d-flex {
+        width: 100%;
+        gap: 10px;
+        padding: 0;
+        margin: 0;
+    }
+
+    /* Все кнопки */
+    .auth-container .btn {
+        width: 100%;
+        box-sizing: border-box;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    /* Регистрация */
+    .auth-container .btn-primary {
+        background-color: var(--primary-color) !important;
+        color: #ffffff !important;
+        border: 1px solid var(--primary-color);
+    }
+
+    .auth-container .btn-primary:hover,
+    .auth-container .btn-primary:focus {
+        background-color: #0b5ed7 !important;
+        color: #ffffff !important;
+    }
+
+    /* Войти */
+    .auth-container .btn-outline-primary {
+        background-color: transparent !important;
+        color: var(--primary-color) !important;
+        border: 1px solid var(--primary-color);
+    }
+
+    .auth-container .btn-outline-primary:hover,
+    .auth-container .btn-outline-primary:focus {
+        background-color: var(--primary-color) !important;
+        color: #ffffff !important;
+    }
+}
+/* =====================================================
+   MOBILE AUTH SPACING FIX
+   ===================================================== */
+
+   @media (max-width: 991.98px) {
+
+    /* Общая белая подложка — пусть дышит */
+    .navbar-collapse {
+        padding: 20px 16px;
+    }
+
+    /* Контейнер с кнопками */
+    .auth-container {
+        width: 100%;
+        margin-top: 16px;
+        margin-bottom: 16px;
+    }
+
+    /* Внутренний flex с кнопками */
+    .auth-container .d-flex {
+        width: 100%;
+        gap: 12px;
+    }
+
+    /* Кнопки — как у поиска */
+    .auth-container .btn {
+        width: 100%;
+        height: 44px;
+        border-radius: 8px;
+    }
+
+    /* Немного воздуха между навигацией и кнопками */
+    .navbar-nav {
+        margin-bottom: 16px;
+    }
+
+    /* И между кнопками и поиском */
+    .search-container,
+    .quick-search-container {
+        margin-top: 16px;
+    }
+}
+

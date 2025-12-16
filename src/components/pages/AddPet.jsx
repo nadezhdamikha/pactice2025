@@ -10,7 +10,7 @@ const API_LOGIN_URL = `${API_BASE_URL}/api/login`;
 function AddPet({ showNotification }) {
   const navigate = useNavigate();
   const { user, isAuthenticated, login } = useAuth();
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [password, setPassword] = useState('');
@@ -22,7 +22,8 @@ function AddPet({ showNotification }) {
     digit: false
   });
   const [agreement, setAgreement] = useState(false);
-
+  const [register, setRegister] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -37,7 +38,6 @@ function AddPet({ showNotification }) {
     confirm: 0
   });
 
-  // Заполняем форму данными пользователя если он авторизован
   useEffect(() => {
     if (isAuthenticated && user) {
       const cleanName = user.name ? user.name.replace(/[^А-Яа-яЁё\s-]/g, '') : '';
@@ -48,6 +48,8 @@ function AddPet({ showNotification }) {
         phone: user.phone || '',
         email: user.email || ''
       }));
+      
+      setRegister(true);
     }
   }, [isAuthenticated, user]);
 
@@ -70,7 +72,9 @@ function AddPet({ showNotification }) {
   };
 
   const validatePhone = (phone) => /^\+?[0-9\s\-()]+$/.test(phone);
+
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const validatePassword = (pwd) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{7,}$/.test(pwd);
 
   const handleInputChange = (e) => {
@@ -141,17 +145,18 @@ function AddPet({ showNotification }) {
       newErrors.mark = 'Номер чипа может содержать только латинские буквы, цифры и дефисы';
     }
     
-    // ВАЖНО: если пользователь НЕ авторизован, ТРЕБУЕМ пароль для создания аккаунта
-    if (!isAuthenticated) {
-      if (!password) newErrors.password = 'Введите пароль для создания аккаунта';
-      else if (!validatePassword(password)) newErrors.password = 'Пароль должен содержать минимум 7 символов, включая 1 цифру, 1 строчную и 1 заглавную букву';
+    if (register) {
+      if (!password) {
+        newErrors.password = 'Введите пароль';
+      } else if (!validatePassword(password)) {
+        newErrors.password = 'Пароль должен содержать минимум 7 символов, включая 1 цифру, 1 строчную и 1 заглавную букву';
+      }
       
-      if (!passwordConfirmation) newErrors.password_confirmation = 'Подтвердите пароль';
-      else if (password !== passwordConfirmation) newErrors.password_confirmation = 'Пароли не совпадают';
-    }
-    // Если пользователь авторизован, тоже требуем пароль для подтверждения
-    else {
-      if (!password) newErrors.password = 'Введите пароль для подтверждения';
+      if (!passwordConfirmation) {
+        newErrors.password_confirmation = 'Подтвердите пароль';
+      } else if (password !== passwordConfirmation) {
+        newErrors.password_confirmation = 'Пароли не совпадают';
+      }
     }
     
     if (!agreement) newErrors.confirm = 'Необходимо согласие на обработку персональных данных';
@@ -177,13 +182,31 @@ function AddPet({ showNotification }) {
         }),
       });
       
+      const responseData = await response.json();
+      
       if (response.ok) {
         return { success: true };
       } else {
-        const errorData = await response.json();
-        return { 
-          success: false, 
-          error: errorData.error?.message || 'Ошибка регистрации' 
+        // Извлекаем детальные ошибки валидации
+        let errorMessage = 'Ошибка регистрации';
+        
+        if (responseData.error?.errors) {
+          const serverErrors = responseData.error.errors;
+          // Берем первую ошибку из всех полей
+          for (const field in serverErrors) {
+            if (serverErrors[field] && serverErrors[field][0]) {
+              errorMessage = serverErrors[field][0];
+              break;
+            }
+          }
+        } else if (responseData.error?.message) {
+          errorMessage = responseData.error.message;
+        }
+        
+        return {
+          success: false,
+          error: errorMessage,
+          errors: responseData.error?.errors || {}
         };
       }
     } catch (error) {
@@ -207,16 +230,16 @@ function AddPet({ showNotification }) {
       
       if (response.ok) {
         const data = await response.json();
-        return { 
-          success: true, 
+        return {
+          success: true,
           token: data.token || data.data?.token,
           userData: data.data || data
         };
       } else {
         const errorData = await response.json();
-        return { 
-          success: false, 
-          error: errorData.error?.message || 'Ошибка входа' 
+        return {
+          success: false,
+          error: errorData.error?.message || 'Ошибка входа'
         };
       }
     } catch (error) {
@@ -239,59 +262,75 @@ function AddPet({ showNotification }) {
       let userToken = null;
       let isNewRegistration = false;
       
-      // 1. Если пользователь НЕ авторизован - регистрируем и логиним
-      if (!isAuthenticated ) {
-        // Регистрируем пользователя
-        const registrationResult = await registerUser({
-          name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
-          password: password,
-          password_confirmation: passwordConfirmation
-        });
-        
-        if (!registrationResult.success) {
-          showNotification(`Ошибка регистрации: The email has already been taken`, 'danger');
-          setIsSubmitting(false);
-          return;
-        }
-        
-        // Авторизуем пользователя после регистрации
-        const loginResult = await loginUser(formData.email, password);
-        
-        if (loginResult.success) {
-          userToken = loginResult.token;
-          // Выполняем вход в систему
-          login({
-            email: formData.email,
+      if (register) {
+        if (!isAuthenticated) {
+          const registrationResult = await registerUser({
             name: formData.name,
             phone: formData.phone,
-            id: loginResult.userData?.id
-          }, userToken);
+            email: formData.email,
+            password: password,
+            password_confirmation: passwordConfirmation
+          });
           
-          isNewRegistration = true;
+          if (!registrationResult.success) {
+            // Если email уже занят, пробуем войти
+            if (registrationResult.error.includes('email has already been taken') || 
+                registrationResult.error.includes('email уже занят')) {
+              
+              const loginResult = await loginUser(formData.email, password);
+              
+              if (loginResult.success) {
+                userToken = loginResult.token;
+                login({
+                  email: formData.email,
+                  name: formData.name,
+                  phone: formData.phone,
+                  id: loginResult.userData?.id
+                }, userToken);
+              } else {
+                showNotification('Аккаунт с этим email уже существует. Введите правильный пароль.', 'danger');
+                setErrors({ password: 'Введите правильный пароль для этого аккаунта' });
+                setIsSubmitting(false);
+                return;
+              }
+            } else {
+              showNotification(`Ошибка регистрации: ${registrationResult.error}`, 'danger');
+              setIsSubmitting(false);
+              return;
+            }
+          } else {
+            const loginResult = await loginUser(formData.email, password);
+            
+            if (loginResult.success) {
+              userToken = loginResult.token;
+              login({
+                email: formData.email,
+                name: formData.name,
+                phone: formData.phone,
+                id: loginResult.userData?.id
+              }, userToken);
+              
+              isNewRegistration = true;
+            } else {
+              showNotification(`Регистрация прошла, но вход не удался: ${loginResult.error}`, 'warning');
+              setIsSubmitting(false);
+              return;
+            }
+          }
         } else {
-          showNotification(`Регистрация прошла, но вход не удался: ${loginResult.error}`, 'warning');
-          setIsSubmitting(false);
-          return;
-        }
-      }
-      // 2. Если пользователь уже авторизован - проверяем пароль
-      else {
-        // Проверяем пароль через API логина
-        const loginResult = await loginUser(formData.email, password);
-        
-        if (loginResult.success) {
-          userToken = user.token; // Используем существующий токен
-        } else {
-          showNotification('Неверный пароль', 'danger');
-          setErrors({ password: 'Неверный пароль' });
-          setIsSubmitting(false);
-          return;
+          const loginResult = await loginUser(formData.email, password);
+          
+          if (loginResult.success) {
+            userToken = user.token;
+          } else {
+            showNotification('Неверный пароль', 'danger');
+            setErrors({ password: 'Неверный пароль' });
+            setIsSubmitting(false);
+            return;
+          }
         }
       }
       
-      // 2. Отправляем объявление
       const submitData = new FormData();
       
       submitData.append('name', formData.name);
@@ -302,15 +341,16 @@ function AddPet({ showNotification }) {
       submitData.append('mark', formData.mark || '');
       submitData.append('description', formData.description);
       submitData.append('confirm', agreement ? 1 : 0);
-      submitData.append('register', 1); // ВСЕГДА 1 - создаем/привязываем аккаунт
+      submitData.append('register', register ? 1 : 0);
       
       if (formData.photo1) submitData.append('photo1', formData.photo1);
       if (formData.photo2) submitData.append('photo2', formData.photo2);
       if (formData.photo3) submitData.append('photo3', formData.photo3);
       
-      // ВСЕГДА добавляем пароли
-      submitData.append('password', password);
-      submitData.append('password_confirmation', passwordConfirmation || password);
+      if (register) {
+        submitData.append('password', password);
+        submitData.append('password_confirmation', passwordConfirmation || password);
+      }
       
       const headers = {};
       if (userToken) {
@@ -349,13 +389,18 @@ function AddPet({ showNotification }) {
         }
         
         if (petId) {
-          if (isNewRegistration) {
-            showNotification('Аккаунт создан и объявление успешно добавлено!', 'success');
+          if (register) {
+            if (isNewRegistration) {
+              showNotification('Аккаунт создан и объявление успешно добавлено!', 'success');
+            } else {
+              showNotification('Объявление успешно добавлено и привязано к вашему аккаунту!', 'success');
+            }
+            
+            navigate(`/profile`);
           } else {
-            showNotification('Объявление успешно добавлено и привязано к вашему аккаунту!', 'success');
+            showNotification('Анонимное объявление успешно добавлено!', 'success');
+            navigate('/');
           }
-          
-          navigate(`/pet/${petId}`);
         } else {
           showNotification('Объявление успешно добавлено!', 'success');
           navigate('/');
@@ -413,8 +458,8 @@ function AddPet({ showNotification }) {
               
               <div className="alert alert-info mb-4">
                 <i className="bi bi-info-circle me-2"></i>
-                <strong>Внимание!</strong> Для добавления объявления необходимо создать аккаунт или войти в существующий.
-                Объявление будет автоматически привязано к вашему аккаунту.
+                <strong>Внимание!</strong> Вы можете добавить объявление анонимно или привязать его к аккаунту.
+                Привязанные объявления будут отображаться в вашем личном кабинете.
               </div>
               
               {Object.keys(errors).length > 0 && (
@@ -490,73 +535,100 @@ function AddPet({ showNotification }) {
                   {errors.email && <div className="invalid-feedback">{errors.email}</div>}
                 </div>
                 
-                {/* Поля пароля - ВСЕГДА показываем */}
-                <div className="row mb-3">
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="password" className="form-label">
-                      {isAuthenticated ? 'Пароль для подтверждения' : 'Пароль для аккаунта'} <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      className={`form-control ${errors.password ? 'is-invalid' : ''}`}
-                      id="password"
-                      name="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      placeholder={isAuthenticated ? "Введите пароль от вашего аккаунта" : "Придумайте пароль"}
-                    />
-                    {errors.password && <div className="invalid-feedback">{errors.password}</div>}
-                    
-                    {!isAuthenticated && (
-                      <div className="password-requirements mt-2">
-                        <div className={`requirement ${passwordRequirements.length ? 'text-success' : 'text-danger'}`}>
-                          <i className={`bi ${passwordRequirements.length ? 'bi-check-circle' : 'bi-circle'}`} />
-                          <span> Минимум 7 символов</span>
-                        </div>
-                        <div className={`requirement ${passwordRequirements.lowercase ? 'text-success' : 'text-danger'}`}>
-                          <i className={`bi ${passwordRequirements.lowercase ? 'bi-check-circle' : 'bi-circle'}`} />
-                          <span> Одна строчная буква (a-z)</span>
-                        </div>
-                        <div className={`requirement ${passwordRequirements.uppercase ? 'text-success' : 'text-danger'}`}>
-                          <i className={`bi ${passwordRequirements.uppercase ? 'bi-check-circle' : 'bi-circle'}`} />
-                          <span> Одна заглавная буква (A-Z)</span>
-                        </div>
-                        <div className={`requirement ${passwordRequirements.digit ? 'text-success' : 'text-danger'}`}>
-                          <i className={`bi ${passwordRequirements.digit ? 'bi-check-circle' : 'bi-circle'}`} />
-                          <span> Одна цифра (0-9)</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="col-md-6 mb-3">
-                    <label htmlFor="password_confirmation" className="form-label">
-                      Подтверждение пароля <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      className={`form-control ${errors.password_confirmation ? 'is-invalid' : ''}`}
-                      id="password_confirmation"
-                      name="password_confirmation"
-                      value={passwordConfirmation}
-                      onChange={(e) => setPasswordConfirmation(e.target.value)}
-                      required
-                      placeholder="Повторите пароль"
-                    />
-                    {errors.password_confirmation && <div className="invalid-feedback">{errors.password_confirmation}</div>}
+                <div className="mb-3 form-check">
+                  <input
+                    type="checkbox"
+                    className={`form-check-input ${errors.register ? 'is-invalid' : ''}`}
+                    id="register"
+                    name="register"
+                    checked={register}
+                    onChange={(e) => setRegister(e.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor="register">
+                    Хочу привязать объявление к аккаунту / зарегистрироваться
+                  </label>
+                  <div className="form-text">
+                    {register 
+                      ? 'Объявление будет отображаться в вашем личном кабинете'
+                      : 'Объявление будет анонимным и не будет привязано к аккаунту'
+                    }
                   </div>
                 </div>
                 
-                {isAuthenticated && (
+                {register && (
+                  <div className="row mb-3">
+                    <div className="col-md-6 mb-3">
+                      <label htmlFor="password" className="form-label">
+                        {isAuthenticated ? 'Пароль для подтверждения' : 'Пароль для аккаунта'} <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                        id="password"
+                        name="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required={register}
+                        placeholder={isAuthenticated ? "Введите пароль от вашего аккаунта" : "Придумайте пароль"}
+                      />
+                      {errors.password && <div className="invalid-feedback">{errors.password}</div>}
+                      
+                      {!isAuthenticated && (
+                        <div className="password-requirements mt-2">
+                          <div className={`requirement ${passwordRequirements.length ? 'text-success' : 'text-danger'}`}>
+                            <i className={`bi ${passwordRequirements.length ? 'bi-check-circle' : 'bi-circle'}`} />
+                            <span> Минимум 7 символов</span>
+                          </div>
+                          <div className={`requirement ${passwordRequirements.lowercase ? 'text-success' : 'text-danger'}`}>
+                            <i className={`bi ${passwordRequirements.lowercase ? 'bi-check-circle' : 'bi-circle'}`} />
+                            <span> Одна строчная буква (a-z)</span>
+                          </div>
+                          <div className={`requirement ${passwordRequirements.uppercase ? 'text-success' : 'text-danger'}`}>
+                            <i className={`bi ${passwordRequirements.uppercase ? 'bi-check-circle' : 'bi-circle'}`} />
+                            <span> Одна заглавная буква (A-Z)</span>
+                          </div>
+                          <div className={`requirement ${passwordRequirements.digit ? 'text-success' : 'text-danger'}`}>
+                            <i className={`bi ${passwordRequirements.digit ? 'bi-check-circle' : 'bi-circle'}`} />
+                            <span> Одна цифра (0-9)</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="col-md-6 mb-3">
+                      <label htmlFor="password_confirmation" className="form-label">
+                        Подтверждение пароля <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        className={`form-control ${errors.password_confirmation ? 'is-invalid' : ''}`}
+                        id="password_confirmation"
+                        name="password_confirmation"
+                        value={passwordConfirmation}
+                        onChange={(e) => setPasswordConfirmation(e.target.value)}
+                        required={register}
+                        placeholder="Повторите пароль"
+                      />
+                      {errors.password_confirmation && <div className="invalid-feedback">{errors.password_confirmation}</div>}
+                    </div>
+                  </div>
+                )}
+                
+                {isAuthenticated && register && (
                   <div className="alert alert-success mb-3">
                     <i className="bi bi-person-check me-2"></i>
-                    Вы авторизованы как <strong>{user.name || user.email}</strong>. 
+                    Вы авторизованы как <strong>{user.name || user.email}</strong>.
                     Объявление будет привязано к вашему аккаунту.
                   </div>
                 )}
                 
-                {/* Остальные поля формы */}
+                {!register && (
+                  <div className="alert alert-warning mb-3">
+                    <i className="bi bi-eye-slash me-2"></i>
+                    Объявление будет анонимным и не будет отображаться в личном кабинете.
+                  </div>
+                )}
+                
                 <div className="mb-3">
                   <label htmlFor="kind" className="form-label">
                     Вид животного <span className="text-danger">*</span>
@@ -701,7 +773,7 @@ function AddPet({ showNotification }) {
                         <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                         Отправка...
                       </>
-                    ) : 'Добавить объявление'}
+                    ) : register ? 'Добавить объявление и привязать к аккаунту' : 'Добавить анонимное объявление'}
                   </button>
                 </div>
               </form>

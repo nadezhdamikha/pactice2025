@@ -17,6 +17,7 @@ const Search = ({ showNotification }) => {
   const [totalPages, setTotalPages] = useState(0);
   const [totalResults, setTotalResults] = useState(0);
   const [districts, setDistricts] = useState([]);
+  const [hasSearched, setHasSearched] = useState(false); // Новое состояние для отслеживания поиска
   
   const itemsPerPage = 10;
   
@@ -46,7 +47,7 @@ const Search = ({ showNotification }) => {
     setDistricts(uniqueDistricts);
   }, []);
   
-  // Загружаем все животные при монтировании компонента и при изменении параметров URL
+  // Загружаем животных только если есть параметры поиска в URL
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const district = params.get('district') || '';
@@ -56,11 +57,20 @@ const Search = ({ showNotification }) => {
     setSearchParams({ district, kind });
     setCurrentPage(page);
     
-    // Загружаем животных всегда, даже если нет параметров поиска
-    performSearch({ district, kind }, page);
+    // Загружаем животных только если есть хотя бы один параметр поиска
+    if (district || kind) {
+      setHasSearched(true);
+      performSearch({ district, kind }, page);
+    } else {
+      // Если нет параметров поиска - сбрасываем результаты
+      setResults([]);
+      setTotalResults(0);
+      setTotalPages(0);
+      setHasSearched(false);
+    }
   }, [location.search]);
   
-  // Функция для получения всех животных
+  // Функция для получения животных с фильтрами
   const performSearch = async (params = searchParams, page = currentPage) => {
     setIsLoading(true);
     setError(null);
@@ -68,29 +78,21 @@ const Search = ({ showNotification }) => {
     try {
       const queryParams = new URLSearchParams();
       
-      // Добавляем параметры поиска только если они есть
+      // Добавляем параметры поиска
       if (params.district) queryParams.append('district', params.district);
       if (params.kind) queryParams.append('kind', params.kind);
       
-      let url;
-      if (params.district || params.kind) {
-        // Если есть параметры поиска, используем поисковый эндпоинт
-        url = `https://pets.сделай.site/api/search/order?${queryParams.toString()}`;
-      } else {
-        // Если нет параметров поиска, получаем все животные
- 
-        url = 'https://pets.сделай.site/api/search/order';
-      }
+      const url = `https://pets.сделай.site/api/search/order?${queryParams.toString()}`;
       
-      console.log('Fetching from URL:', url); // Отладка
+      console.log('Fetching from URL:', url);
       
       const response = await fetch(url);
       
-      console.log('Search response:', response.status); // Отладка
+      console.log('Search response:', response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Search data:', data); // Отладка
+        console.log('Search data:', data);
         
         // Обработка разных форматов ответа от сервера
         let allResults = [];
@@ -109,7 +111,7 @@ const Search = ({ showNotification }) => {
           allResults = data.orders;
         }
         
-        console.log('Processed results:', allResults); // Отладка
+        console.log('Processed results:', allResults);
         
         setTotalResults(allResults.length);
         
@@ -124,11 +126,7 @@ const Search = ({ showNotification }) => {
         
         // Показываем уведомление если нет результатов
         if (allResults.length === 0) {
-          if (params.district || params.kind) {
-            setError('По вашему запросу ничего не найдено');
-          } else {
-            setError('Нет доступных объявлений о животных');
-          }
+          setError('По вашему запросу ничего не найдено');
         }
       } else {
         setError(`Ошибка сервера: ${response.status}`);
@@ -167,12 +165,19 @@ const Search = ({ showNotification }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    // Проверяем, что заполнено хотя бы одно поле
+    if (!searchParams.district && !searchParams.kind.trim()) {
+      showNotification('Заполните хотя бы одно поле для поиска', 'warning');
+      return;
+    }
+    
     const queryParams = new URLSearchParams();
     if (searchParams.district) queryParams.append('district', searchParams.district);
-    if (searchParams.kind) queryParams.append('kind', searchParams.kind);
+    if (searchParams.kind.trim()) queryParams.append('kind', searchParams.kind.trim());
     
     navigate(`/search?${queryParams.toString()}`);
     setCurrentPage(1);
+    setHasSearched(true);
   };
   
   const handleInputChange = (e) => {
@@ -200,6 +205,7 @@ const Search = ({ showNotification }) => {
     setTotalPages(0);
     setTotalResults(0);
     setError(null);
+    setHasSearched(false);
     navigate('/search');
   };
   
@@ -263,7 +269,7 @@ const Search = ({ showNotification }) => {
                     value={searchParams.district}
                     onChange={handleInputChange}
                   >
-                    <option value="">Все районы</option>
+                    <option value="">Выберите район</option>
                     {districts.map((district, index) => (
                       <option key={index} value={district}>
                         {district}
@@ -307,7 +313,7 @@ const Search = ({ showNotification }) => {
                       )}
                     </button>
                     
-                    {(searchParams.district || searchParams.kind || results.length > 0) && (
+                    {hasSearched && (
                       <button
                         type="button"
                         className="btn btn-outline-secondary"
@@ -315,7 +321,7 @@ const Search = ({ showNotification }) => {
                         disabled={isLoading}
                       >
                         <i className="bi bi-x-circle me-2"></i>
-                        Показать всех
+                        Очистить поиск
                       </button>
                     )}
                   </div>
@@ -339,11 +345,11 @@ const Search = ({ showNotification }) => {
             </div>
             <p className="mt-3">Загружаем животных...</p>
           </div>
-        ) : results.length > 0 ? (
+        ) : hasSearched && results.length > 0 ? (
           <>
             <div className="d-flex justify-content-between align-items-center mb-4">
               <h3>
-                {searchParams.district || searchParams.kind ? 'Результаты поиска' : 'Все животные'}
+                Результаты поиска
               </h3>
               <div>
                 <span className="badge bg-primary me-2">
@@ -462,7 +468,7 @@ const Search = ({ showNotification }) => {
               </nav>
             )}
           </>
-        ) : (searchParams.district || searchParams.kind) ? (
+        ) : hasSearched && !isLoading ? (
           <div className="text-center py-5">
             <div className="alert alert-info">
               <i className="bi bi-info-circle me-2"></i>
@@ -488,9 +494,9 @@ const Search = ({ showNotification }) => {
           <div className="text-center py-5">
             <div className="alert alert-light">
               <i className="bi bi-search display-4 text-muted mb-3"></i>
-              <h4 className="text-muted">Нет доступных объявлений</h4>
+              <h4 className="text-muted">Начните поиск животных</h4>
               <p className="text-muted">
-                В данный момент нет объявлений о найденных животных
+                Заполните хотя бы одно поле (район или вид животного) для поиска
               </p>
             </div>
           </div>
@@ -500,4 +506,4 @@ const Search = ({ showNotification }) => {
   );
 };
 
-export default Search
+export default Search;

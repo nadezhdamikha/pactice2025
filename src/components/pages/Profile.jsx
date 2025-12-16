@@ -21,7 +21,6 @@ const Profile = ({ showNotification }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: '',
     phone: '',
     email: ''
   });
@@ -113,7 +112,6 @@ const Profile = ({ showNotification }) => {
          
           setUserData(newUserData);
           setEditForm({
-            name: userInfo.name || '',
             phone: userInfo.phone || '',
             email: userInfo.email || ''
           });
@@ -242,11 +240,6 @@ const Profile = ({ showNotification }) => {
   };
 
   const handleSaveProfile = async () => {
-    if (!editForm.name.trim()) {
-      showNotification('Введите имя', 'danger');
-      return;
-    }
-   
     if (!editForm.email.trim()) {
       showNotification('Введите email', 'danger');
       return;
@@ -268,13 +261,6 @@ const Profile = ({ showNotification }) => {
     try {
       const updates = [];
       let updatedFields = {};
-
-      // Обновляем имя в контексте (если API для этого нет)
-      if (editForm.name !== userData.name) {
-        updates.push('имя');
-        updatedFields.name = editForm.name;
-        updateUser({ name: editForm.name });
-      }
 
       // Обновляем телефон через API PATCH
       if (editForm.phone !== userData.phone) {
@@ -300,6 +286,7 @@ const Profile = ({ showNotification }) => {
           }
         } catch (error) {
           showNotification(`Ошибка обновления телефона: ${error.message}`, 'danger');
+          setIsUpdatingProfile(false);
           return;
         }
       }
@@ -328,6 +315,7 @@ const Profile = ({ showNotification }) => {
           }
         } catch (error) {
           showNotification(`Ошибка обновления email: ${error.message}`, 'danger');
+          setIsUpdatingProfile(false);
           return;
         }
       }
@@ -362,7 +350,6 @@ const Profile = ({ showNotification }) => {
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditForm({
-      name: userData.name,
       phone: userData.phone,
       email: userData.email
     });
@@ -382,14 +369,14 @@ const Profile = ({ showNotification }) => {
 
   const getStatusClass = (status) => {
     const classMap = {
-      'active': 'bg-success',
-      'wasFound': 'bg-info',
-      'onModeration': 'bg-warning',
-      'archive': 'bg-secondary',
-      'published': 'bg-success',
-      'pending': 'bg-warning'
+      'active': 'badge bg-success',
+      'wasFound': 'badge bg-info',
+      'onModeration': 'badge bg-warning',
+      'archive': 'badge bg-secondary',
+      'published': 'badge bg-success',
+      'pending': 'badge bg-warning'
     };
-    return classMap[status] || 'bg-secondary';
+    return classMap[status] || 'badge bg-secondary';
   };
 
   const calculateDaysOnSite = (dateString) => {
@@ -429,60 +416,59 @@ const Profile = ({ showNotification }) => {
       <div className="container py-5">
         <div className="row justify-content-center">
           <div className="col-md-10">
-            <div className="card shadow slide-in">
+            <div className="card shadow-lg border-0 rounded-3">
               <div className="card-body p-5">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                  <h2 className="mb-0">Личный кабинет</h2>
+                <div className="d-flex justify-content-between align-items-center mb-5">
+                  <h2 className="mb-0 fw-bold">Личный кабинет</h2>
                   <button
-                    className="btn btn-outline-danger"
+                    className="btn btn-outline-danger px-4"
                     onClick={logout}
                   >
-                    <i className="bi bi-box-arrow-right me-2"></i>
                     Выйти
                   </button>
                 </div>
                
                 <div className="row mb-5">
                   <div className="col-md-4 text-center">
-                    <div className="profile-avatar bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3"
+                    <div className="profile-avatar bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-4"
                          style={{ width: '100px', height: '100px', borderRadius: '50%', fontSize: '2.5rem' }}>
                       {userData.name?.charAt(0).toUpperCase() || 'П'}
                     </div>
-                    <h4 id="profile-name">{userData.name}</h4>
-                    <p className="text-muted" id="profile-days">
+                    <h4 className="fw-bold mb-2">{userData.name}</h4>
+                    <p className="text-muted">
                       На сайте {calculateDaysOnSite(userData.registrationDate)} дней
                     </p>
                   </div>
                  
                   <div className="col-md-8">
                     <div className="row">
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Email <span className="text-danger">*</span></label>
+                      <div className="col-12 mb-4">
+                        <label className="form-label fw-medium mb-2">Имя</label>
+                        <div className="fs-5 py-2">{userData.name || 'Не указано'}</div>
+                      </div>
+                     
+                      <div className="col-md-6 mb-4">
+                        <label className="form-label fw-medium mb-2">Email</label>
                         {isEditing ? (
                           <input
                             type="email"
-                            className="form-control"
+                            className="form-control form-control-lg"
                             value={editForm.email}
                             onChange={(e) => setEditForm({...editForm, email: e.target.value})}
                             required
                             disabled={isUpdatingProfile}
                           />
                         ) : (
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={userData.email}
-                            readOnly
-                          />
+                          <div className="fs-5 py-2">{userData.email || 'Не указан'}</div>
                         )}
                       </div>
                      
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Телефон <span className="text-danger">*</span></label>
+                      <div className="col-md-6 mb-4">
+                        <label className="form-label fw-medium mb-2">Телефон</label>
                         {isEditing ? (
                           <input
                             type="tel"
-                            className="form-control"
+                            className="form-control form-control-lg"
                             value={editForm.phone}
                             onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
                             pattern="[\+\d]+"
@@ -490,62 +476,26 @@ const Profile = ({ showNotification }) => {
                             disabled={isUpdatingProfile}
                           />
                         ) : (
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={userData.phone}
-                            readOnly
-                          />
+                          <div className="fs-5 py-2">{userData.phone || 'Не указан'}</div>
                         )}
                       </div>
                      
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Дата регистрации</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={formatDate(userData.registrationDate)}
-                          readOnly
-                        />
+                      <div className="col-md-6 mb-4">
+                        <label className="form-label fw-medium mb-2">Дата регистрации</label>
+                        <div className="fs-5 py-2">{formatDate(userData.registrationDate)}</div>
                       </div>
                      
-                      <div className="col-md-6 mb-3">
-                        <label className="form-label">Количество объявлений</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          value={userData.ordersCount}
-                          readOnly
-                        />
-                      </div>
-                     
-                      <div className="col-12 mb-3">
-                        <label className="form-label">Имя</label>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={editForm.name}
-                            onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                            required
-                            disabled={isUpdatingProfile}
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={userData.name}
-                            readOnly
-                          />
-                        )}
+                      <div className="col-md-6 mb-4">
+                        <label className="form-label fw-medium mb-2">Количество объявлений</label>
+                        <div className="fs-5 py-2">{userData.ordersCount}</div>
                       </div>
                     </div>
                    
-                    <div className="d-flex gap-2">
+                    <div className="d-flex gap-3 mt-4">
                       {isEditing ? (
                         <>
                           <button 
-                            className="btn btn-primary" 
+                            className="btn btn-primary px-4 py-2" 
                             onClick={handleSaveProfile}
                             disabled={isUpdatingProfile}
                           >
@@ -557,7 +507,7 @@ const Profile = ({ showNotification }) => {
                             ) : 'Сохранить изменения'}
                           </button>
                           <button 
-                            className="btn btn-outline-secondary" 
+                            className="btn btn-outline-secondary px-4 py-2" 
                             onClick={handleCancelEdit}
                             disabled={isUpdatingProfile}
                           >
@@ -565,7 +515,7 @@ const Profile = ({ showNotification }) => {
                           </button>
                         </>
                       ) : (
-                        <button className="btn btn-primary" onClick={handleEditProfile}>
+                        <button className="btn btn-primary px-4 py-2" onClick={handleEditProfile}>
                           Редактировать профиль
                         </button>
                       )}
@@ -574,92 +524,109 @@ const Profile = ({ showNotification }) => {
                 </div>
                
                 <div className="mb-5">
-                  <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h4 className="mb-0">Мои объявления</h4>
+                  <div className="d-flex justify-content-between align-items-center mb-4">
+                    <h4 className="mb-0 fw-bold">Мои объявления</h4>
+                    {userPets.length > 0 && (
+                      <button 
+                        className="btn btn-outline-primary"
+                        onClick={() => navigate('/add-pet')}
+                      >
+                        Добавить объявление
+                      </button>
+                    )}
                   </div>
                  
                   {userPets.length === 0 ? (
-                    <div className="text-center py-4">
-                      <i className="bi bi-inbox display-4 text-muted mb-3"></i>
-                      <p className="text-muted">У вас пока нет добавленных объявлений</p>
-                      <button className="btn btn-link" onClick={() => navigate('/add-pet')}>
+                    <div className="text-center py-5">
+                      <div className="mb-3">
+                        <i className="bi bi-inbox display-4 text-muted"></i>
+                      </div>
+                      <p className="text-muted fs-5 mb-3">У вас пока нет добавленных объявлений</p>
+                      <button className="btn btn-primary" onClick={() => navigate('/add-pet')}>
                         Добавить первое объявление
                       </button>
                     </div>
                   ) : (
-                    <div className="table-responsive">
-                      <table className="table table-striped">
-                        <thead>
+                    <div className="table-responsive rounded-3 overflow-hidden border">
+                      <table className="table table-hover mb-0">
+                        <thead className="table-light">
                           <tr>
-                            <th>Фото</th>
-                            <th>Вид</th>
-                            <th>Номер чипа</th>
-                            <th>Район</th>
-                            <th>Статус</th>
-                            <th>Действия</th>
+                            <th className="px-4 py-3">Фото</th>
+                            <th className="px-4 py-3">Вид</th>
+                            <th className="px-4 py-3">Номер чипа</th>
+                            <th className="px-4 py-3">Район</th>
+                            <th className="px-4 py-3">Статус</th>
+                            <th className="px-4 py-3">Действия</th>
                           </tr>
                         </thead>
                         <tbody>
                           {userPets.map(pet => (
-                            <tr key={pet.id}>
-                              <td>
+                            <tr key={pet.id} className="align-middle">
+                              <td className="px-4 py-3">
                                 {pet.photos && pet.photos.length > 0 ? (
                                   <img
                                     src={pet.photos[0]}
                                     alt={pet.kind}
-                                    style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }}
+                                    className="rounded"
+                                    style={{ width: '60px', height: '60px', objectFit: 'cover' }}
                                     onError={(e) => {
                                       e.target.src = 'https://via.placeholder.com/60x60?text=No+Photo';
                                     }}
                                   />
                                 ) : (
-                                  <div style={{ width: '60px', height: '60px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}></div>
+                                  <div className="rounded bg-light d-flex align-items-center justify-content-center"
+                                       style={{ width: '60px', height: '60px' }}>
+                                    <span className="text-muted">Нет фото</span>
+                                  </div>
                                 )}
                               </td>
-                              <td>{pet.kind}</td>
-                              <td>{pet.mark || 'Не указан'}</td>
-                              <td>{pet.district}</td>
-                              <td>
-                                <span className={`badge ${getStatusClass(pet.status)}`}>
+                              <td className="px-4 py-3">
+                                <div className="fw-medium">{pet.kind}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div>{pet.mark || <span className="text-muted">Не указан</span>}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div>{pet.district}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={getStatusClass(pet.status)}>
                                   {getStatusText(pet.status)}
                                 </span>
                               </td>
-                              <td>
+                              <td className="px-4 py-3">
                                 <div className="btn-group" role="group">
                                   <button
-                                    className="btn btn-sm btn-outline-primary me-1"
+                                    className="btn btn-outline-primary btn-sm"
                                     onClick={() => navigate(`/pet/${pet.id}`)}
                                   >
                                     Просмотр
                                   </button>
                                   {canEditPet(pet) && (
                                     <button
-                                      className="btn btn-sm btn-outline-warning me-1"
+                                      className="btn btn-outline-warning btn-sm"
                                       onClick={() => handleEditPet(pet)}
                                     >
-                                      <i className="bi bi-pencil"></i>
+                                      Редактировать
                                     </button>
                                   )}
                                   {canDeletePet(pet) && (
                                     <button
-                                      className="btn btn-sm btn-outline-danger"
+                                      className="btn btn-outline-danger btn-sm"
                                       onClick={() => handleDeletePet(pet.id)}
                                       disabled={isDeleting && deletePetId === pet.id}
                                     >
                                       {isDeleting && deletePetId === pet.id ? (
                                         <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                      ) : (
-                                        <i className="bi bi-trash"></i>
-                                      )}
+                                      ) : 'Удалить'}
                                     </button>
                                   )}
                                   {!canDeletePet(pet) && (
                                     <button
-                                      className="btn btn-sm btn-outline-secondary"
+                                      className="btn btn-outline-secondary btn-sm"
                                       disabled
-                                      title="Это объявление нельзя удалить (возможно, уже удалено или имеет другой статус)"
                                     >
-                                      <i className="bi bi-trash"></i>
+                                      Удалить
                                     </button>
                                   )}
                                 </div>

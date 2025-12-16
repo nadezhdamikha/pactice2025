@@ -1,4 +1,3 @@
-// src/components/search/QuickSearch.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -45,22 +44,40 @@ const QuickSearch = () => {
     performSearch();
   }, [debouncedSearchQuery]);
 
-  // Функция для получения подсказок с сервера
+  // Функция для получения подсказок с сервера и удаления дубликатов
   const fetchSuggestions = async (query) => {
     try {
       setIsLoading(true);
-      setShowSuggestions(true); // Показываем контейнер для подсказок
+      setShowSuggestions(true);
       
       const response = await fetch(`https://pets.сделай.site/api/search?query=${encodeURIComponent(query)}`);
       
       if (response.ok) {
         const data = await response.json();
         
-        // Проверяем, есть ли результаты
         if (data.data && Array.isArray(data.data.orders) && data.data.orders.length > 0) {
-          setSuggestions(data.data.orders);
+          // Удаляем дубликаты по ID с помощью Map
+          const uniqueOrders = Array.from(
+            new Map(data.data.orders.map(order => [order.id, order])).values()
+          );
+          
+          // Убираем дубликаты по описанию с помощью Set
+          const seenDescriptions = new Set();
+          const filteredOrders = uniqueOrders.filter(order => {
+            if (!order.description) return true;
+            
+            const normalizedDesc = order.description.trim().toLowerCase();
+            if (seenDescriptions.has(normalizedDesc)) {
+              return false;
+            }
+            seenDescriptions.add(normalizedDesc);
+            return true;
+          });
+          
+          // Ограничиваем 5 результатами
+          const limitedResults = filteredOrders.slice(0, 5);
+          setSuggestions(limitedResults);
         } else {
-          // Пустой массив или отсутствие orders
           setSuggestions([]);
         }
       } else {
@@ -79,18 +96,15 @@ const QuickSearch = () => {
     const query = e.target.value;
     setSearchQuery(query);
     
-    // Сбрасываем подсказки если меньше 4 символов
     if (query.length < 4) {
       setSuggestions([]);
       setShowSuggestions(false);
     }
   };
 
-  // Функция для обработки поиска (переход на страницу поиска с ПАРАМЕТРАМИ)
+  // Функция для обработки поиска
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      // Передаем запрос как параметр "kind" для поиска по описанию
-      // на странице /search
       navigate(`/search?kind=${encodeURIComponent(searchQuery.trim())}`);
       setShowSuggestions(false);
       setSearchQuery('');
@@ -113,16 +127,6 @@ const QuickSearch = () => {
     setShowSuggestions(false);
   };
 
-  // Функция для перехода к полному поиску с найденными параметрами
-  const handleShowAllResults = () => {
-    if (searchQuery.trim()) {
-      // Передаем запрос как параметр "kind" для поиска по описанию
-      navigate(`/search?kind=${encodeURIComponent(searchQuery.trim())}`);
-      setShowSuggestions(false);
-      setSearchQuery('');
-    }
-  };
-
   // Закрытие подсказок при клике вне компонента
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -142,15 +146,13 @@ const QuickSearch = () => {
   const highlightMatch = (text, query) => {
     if (!text || !query) return text || '';
     
-    // Экранируем специальные символы в запросе для RegExp
     const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`(${escapedQuery})`, 'gi');
     return (text || '').replace(regex, '<mark>$1</mark>');
   };
 
-  // Функция для отображения подсказки
+  // Функция для отображения подсказки (только описание)
   const renderSuggestion = (suggestion) => {
-    // Показываем только тип животного и описание
     return (
       <div
         key={suggestion.id}
@@ -160,36 +162,25 @@ const QuickSearch = () => {
         onMouseEnter={(e) => e.currentTarget.classList.add('bg-light')}
         onMouseLeave={(e) => e.currentTarget.classList.remove('bg-light')}
       >
-        <div className="d-flex flex-column">
-          {/* Тип животного */}
-          {suggestion.kind && (
-            <div className="fw-bold text-primary mb-1">
-              <span dangerouslySetInnerHTML={{ 
-                __html: highlightMatch(suggestion.kind, searchQuery) 
-              }} />
-            </div>
-          )}
-          
-          {/* Описание животного */}
-          {suggestion.description && (
-            <div className="text-muted small">
-              <span dangerouslySetInnerHTML={{ 
-                __html: highlightMatch(suggestion.description, searchQuery) 
-              }} />
-            </div>
-          )}
-        </div>
+        {/* Только описание животного */}
+        {suggestion.description && (
+          <div className="text-muted small">
+            <span dangerouslySetInnerHTML={{ 
+              __html: highlightMatch(suggestion.description, searchQuery) 
+            }} />
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <div className="position-relative">
-      <form className="d-flex" onSubmit={(e) => e.preventDefault()}>
-        <div className="position-relative flex-grow-1">
+    <div className="position-relative w-100">
+      <form className="d-flex w-100" onSubmit={(e) => e.preventDefault()}>
+        <div className="position-relative flex-grow-1 w-100">
           <input
             ref={searchInputRef}
-            className="form-control"
+            className="form-control w-100"
             type="search"
             placeholder="Поиск по описанию..."
             aria-label="Search"
@@ -201,9 +192,10 @@ const QuickSearch = () => {
                 setShowSuggestions(true);
               }
             }}
+            style={{ width: '100%' }}
           />
           
-          {/* Сообщение о минимальной длине - показываем только при 1-3 символах */}
+          {/* Сообщение о минимальной длине */}
           {searchQuery.length > 0 && searchQuery.length < 4 && !showSuggestions && (
             <div className="position-absolute end-0 top-50 translate-middle-y me-3">
               <small className="text-muted">Введите минимум 4 символа</small>
@@ -221,25 +213,26 @@ const QuickSearch = () => {
         </div>
         
         <button 
-          className="btn btn-primary ms-2" 
+          className="btn btn-primary ms-2 flex-shrink-0" 
           type="button"
           onClick={handleSearch}
           disabled={!searchQuery.trim()}
         >
-          Поиск
+          <i className="bi bi-search me-1"></i>
+          Найти
         </button>
       </form>
 
-      {/* Выпадающий список с подсказками - показываем только если есть запрос > 3 символов */}
+      {/* Выпадающий список с подсказками */}
       {showSuggestions && searchQuery.length > 3 && (
         <div 
           ref={suggestionsRef}
           className="position-absolute top-100 start-0 end-0 mt-1 bg-white rounded shadow-lg border"
           style={{ 
             zIndex: 1050, 
-            maxHeight: '300px', 
+            maxHeight: '250px', // Уменьшил высоту для 5 элементов
             overflowY: 'auto',
-            display: suggestions.length > 0 || isLoading ? 'block' : 'block'
+            width: '100%' // Добавил ширину 100% для адаптивности
           }}
         >
           {isLoading ? (
@@ -249,17 +242,12 @@ const QuickSearch = () => {
             </div>
           ) : suggestions.length > 0 ? (
             <>
-              <div className="p-2 border-bottom bg-light">
-                <small className="text-muted">
-                  Найдено {suggestions.length} {suggestions.length === 1 ? 'результат' : 
-                  suggestions.length > 1 && suggestions.length < 5 ? 'результата' : 'результатов'}
-                </small>
-              </div>
+
               {suggestions.map(renderSuggestion)}
               <div className="p-2 border-top text-center">
                 <button 
-                  className="btn btn-sm btn-outline-primary"
-                  onClick={handleShowAllResults}
+                  className="btn btn-sm btn-primary"
+                  onClick={handleSearch}
                 >
                   <i className="bi bi-search me-1"></i>
                   Показать все результаты
